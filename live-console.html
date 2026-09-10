@@ -712,6 +712,41 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 
 .sync-warn{background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:10px;font-size:12px;color:#9A3412;margin-bottom:14px;line-height:1.6}
 
+
+/* ============ 分享面板（2026-09-10 师兄：导出 Markdown → 分享，内含 导出 / 转发） ============ */
+.share-hd{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.share-hd .ic{width:32px;height:32px;border-radius:10px;background:var(--pri-soft);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.share-hd .ic svg{width:17px;height:17px;stroke:var(--pri-dark);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.share-hd h3{margin:0;font-size:17px}
+.share-sec{font-size:12px;font-weight:700;color:var(--tx3);letter-spacing:.4px;margin:16px 0 8px}
+.share-list{display:flex;flex-direction:column;gap:9px}
+.share-it{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#F7F8FC;text-align:left;cursor:pointer;transition:.15s}
+.share-it:active{background:#EDEFF8;border-color:#CFD4E8}
+.share-it .ic{width:36px;height:36px;border-radius:11px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.share-it .ic svg{width:17px;height:17px;stroke:var(--pri-dark);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.share-it .tx{flex:1 1 auto;min-width:0}
+.share-it .tt{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14.5px;font-weight:700;color:var(--tx);line-height:1.35}
+.share-it .ts{display:block;font-size:11.5px;color:var(--tx3);line-height:1.5;margin-top:3px;white-space:normal;overflow-wrap:anywhere}
+.share-it .ar{flex:0 0 auto;display:flex;align-items:center;color:var(--tx3)}
+.share-it .ar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.share-it.rec{border-color:#C7CCF5;background:linear-gradient(180deg,#F3F3FF,#F7F8FC)}
+.share-tag{flex:0 0 auto;font-size:10.5px;font-weight:700;color:#fff;background:var(--pri);border-radius:20px;padding:2px 7px;line-height:1.45;white-space:nowrap}
+.share-it .ic.gr{background:var(--green-soft)}
+.share-it .ic.gr svg{stroke:var(--green)}
+.share-it .ic.am{background:var(--amber-soft)}
+.share-it .ic.am svg{stroke:var(--amber)}
+.share-it .ic.bl{background:#EFF4FF}
+.share-it .ic.bl svg{stroke:#3B82F6}
+@media(max-width:768px){.share-it{min-height:60px;padding:12px}.share-it .tt{font-size:14px}.share-it .ts{font-size:11px}.share-hd h3{font-size:16px}}
+
+/* ============ 单场弹窗视图切换（2026-09-10 师兄：优化三个 tab 的布局/大小/位置）============
+   由「左对齐小按钮」改成分段控件：等宽三等分、填满弹窗宽、点击区 ≥44px、选中白底。 */
+.agg-tabs{display:flex;gap:4px;background:#F1F2F7;border-radius:12px;padding:4px;margin:8px 0 14px}
+.agg-tabs .agg-tab{flex:1 1 0;min-width:0;min-height:40px;border-radius:9px;background:transparent;color:var(--tx2);font-size:13.5px;font-weight:600;padding:0 6px;box-shadow:none}
+.agg-tabs .agg-tab.on{background:#fff;color:var(--pri-dark);font-weight:700;box-shadow:0 1px 3px rgba(20,24,60,.12)}
+.agg-tabs .agg-tab:active{background:#E9EBF5}
+.agg-tabs .agg-tab.on:active{background:#fff}
+@media(max-width:768px){.agg-tabs{width:100%}.agg-tabs .agg-tab{min-height:44px;font-size:14px}}
 </style>
 
 <script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
@@ -769,7 +804,6 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 
         <button class="btn" title="云同步" onclick="openSyncSettings()" data-page-node-id="ZcKstrIb3buoFA2j0CjjY2"><span class="sync-dot off" id="syncDot" data-page-node-id="ouVQVLOiKoDBTdo7ITnMDr"></span><span class="btn-t" data-page-node-id="KP4nUaQGL11BkwuD7JgLfN">云同步</span></button>
 
-        <a class="btn ghost" href="https://docs.qq.com/sheet/DZnJCbkFOU0JyYXJk" target="_blank" rel="noopener" title="腾讯文档 · 直播经营日报（六页明细：开播总览/三日/七日/历史明细/同步日志/已归档）" style="text-decoration:none" data-page-node-id="qclawDocdashLink"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span class="btn-t">经营日报六页</span></a>
 
       </div>
 
@@ -1771,13 +1805,12 @@ function tgBeat(k){
   var hits=(window.__beatHits||[]).filter(function(x){return Math.floor(x.m/15)*15===k;});
   if(!hits.length){el.innerHTML='<div class="hint">该时段无逐字稿明细（分篇稿可能缺时间戳）</div>';el.style.display='block';return;}
   var s='';
-  hits.slice(0,12).forEach(function(x){
+  hits.forEach(function(x){
     s+='<div style="display:flex;gap:6px;font-size:12px;margin:4px 0;align-items:baseline">'
       +'<span style="color:var(--tx3);flex:0 0 34px;text-align:right">'+x.m+'′</span>'
       +'<span class="pill '+(x.rk==='high'?'fail':(x.rk==='mid'?'warn':'grey'))+'" style="flex:0 0 auto">'+esc(x.type)+'</span>'
       +'<span style="color:var(--tx2)">'+esc(x.txt)+'</span></div>';
   });
-  if(hits.length>12)s+='<div class="hint" style="margin-top:4px">仅显示前 12 条 / 共 '+hits.length+' 条</div>';
   el.innerHTML=s;el.style.display='block';
 }
 
@@ -5444,7 +5477,7 @@ function showReport(id){
 
    +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
 
-   +'<button class="btn lg" onclick="downloadTxt(window._rpt,window._rptName)">'+svg('doc')+'导出 Markdown</button>'
+   +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
 
    +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
 
@@ -5461,12 +5494,7 @@ function aggSwitch(v){
   var map={data:'aggData',review:'aggReview',script:'aggScript'};
   for(var k in map){var el=document.getElementById(map[k]);if(el)el.style.display=(k===v?'block':'none');}
   var bs=document.querySelectorAll('.agg-tab');
-  for(var i=0;i<bs.length;i++){
-    var on=bs[i].getAttribute('data-v')===v;
-    bs[i].style.background=on?'var(--pri)':'';
-    bs[i].style.color=on?'#fff':'';
-    bs[i].style.borderColor=on?'var(--pri)':'';
-  }
+  for(var i=0;i<bs.length;i++){bs[i].classList.toggle('on',bs[i].getAttribute('data-v')===v);}
 }
 
 function aggDataHTML(s){
@@ -5498,7 +5526,7 @@ function aggReviewHTML(s){
   var txt=buildReport(s); window._rpt=txt; window._rptName='复盘_'+accName(s.acc)+'_'+s.date+'.md';
   return '<div class="report" id="rptBox">'+fmtReport(txt)+'</div>'
     +'<div class="frow"><button class="btn ghost" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
-    +'<button class="btn lg" onclick="downloadTxt(window._rpt,window._rptName)">'+svg('doc')+'导出 Markdown</button>'
+    +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
     +'<button class="btn ghost" onclick="openReview(\''+s.id+'\')">'+svg('edit')+'修改</button></div>';
 }
 
@@ -5516,7 +5544,6 @@ function aggScriptHTML(s, trI){
     +cell('时长',(t.dur?t.dur+' 分':'—'))
     +cell('风险词',(t.riskN>0?('<span style="color:#DC2626;font-weight:600">'+t.riskN+' 种</span>'):'无'))
     +'</div>';
-  if(t.cut)h+='<div class="hint" style="margin-top:8px">手机端仅预览前 1500 字；全文见 <b>'+esc(t.path||'')+'</b>（回电脑打开）。</div>';
   /* 二、话术合规扫描 */
   h+='<div style="font-weight:700;font-size:14px;color:var(--tx);margin:16px 0 6px">二、话术合规扫描</div>';
   if(t.riskN>0){
@@ -5591,7 +5618,7 @@ function aggScriptHTML(s, trI){
   h+='<div class="frow" style="margin-top:16px">'
     +(s?'<button class="btn ghost" onclick="aggSwitch(\'data\')">'+svg('grid')+'本场数据</button>':'')
     +(s?'<button class="btn ghost" onclick="aggSwitch(\'review\')">'+svg('file')+'复盘报告</button>':'')
-    +'<button class="btn pri" onclick="closeModal()">关闭</button></div>';
+    +'<button class="btn pri" style="margin-left:auto" onclick="closeModal()">关闭</button></div>';
   return h;
 }
 
@@ -5601,10 +5628,10 @@ function openSessionAggregate(sesId, defView, trI){
   var title=s?('场次详情 · '+esc(accName(s.acc))+' · '+s.date+(s.liveTime?' · '+esc(s.liveTime):'')):'话术复盘 · 单篇稿子';
   var dSub=s?('点击上方标签在 数据 / 话术 / 复盘 之间切换查看'):'该稿未关联到具体场次（数据 / 话术视图不可用）';
   modal('<button class="modal-x" onclick="closeModal()" aria-label="关闭">×</button><h3>'+title+'</h3><div class="sub">'+dSub+'</div>'
-    +'<div class="frow" style="gap:6px;margin:4px 0 12px">'
-    +'<button class="btn sm agg-tab" data-v="data" onclick="aggSwitch(\'data\')">数据</button>'
-    +'<button class="btn sm agg-tab" data-v="script" onclick="aggSwitch(\'script\')">话术</button>'
-    +'<button class="btn sm agg-tab" data-v="review" onclick="aggSwitch(\'review\')">复盘</button>'
+    +'<div class="agg-tabs">'
+    +'<button class="btn agg-tab" data-v="data" onclick="aggSwitch(\'data\')">数据</button>'
+    +'<button class="btn agg-tab" data-v="script" onclick="aggSwitch(\'script\')">话术</button>'
+    +'<button class="btn agg-tab" data-v="review" onclick="aggSwitch(\'review\')">复盘</button>'
     +'</div>'
     +'<div id="aggData"'+(defView==='data'?'':' style="display:none"')+'>'+(s?aggDataHTML(s):'<div class="empty">未关联到场次</div>')+'</div>'
     +'<div id="aggReview"'+(defView==='review'?'':' style="display:none"')+'>'+(s?aggReviewHTML(s):'<div class="empty">未关联到场次</div>')+'</div>'
@@ -5684,11 +5711,11 @@ function openWeekly(accId){
   var txt=L.join('\n');
   window._rpt=txt;
   var title=accId?'单账号周报 · '+accName(accId):'本周汇总 · 成果共享';
-  var fname=accId?('直播周报_'+accName(accId)+'_'+t+'.md'):('直播周报_'+t+'.md');
+  var fname=accId?('直播周报_'+accName(accId)+'_'+t+'.md'):('直播周报_'+t+'.md');window._rptName=fname;
   modal('<h3>'+title+'</h3><div class="sub">'+(accId?accName(accId):'全账号')+' 近 7 天自动汇总，复制即可发群</div>'
    +'<div class="report">'+fmtReport(txt)+'</div>'
    +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
-   +'<button class="btn lg" onclick="downloadTxt(window._rpt,\''+fname+'\')">'+svg('doc')+'导出 Markdown</button>'
+   +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
    +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
 }
 
@@ -5737,11 +5764,11 @@ function openMonthly(accId){
   }
   var txt=L.join('\n');
   window._rpt=txt;
-  var fname=accId?('直播月报_'+accName(accId)+'_'+t+'.md'):('直播月报_'+t+'.md');
+  var fname=accId?('直播月报_'+accName(accId)+'_'+t+'.md'):('直播月报_'+t+'.md');window._rptName=fname;
   modal('<h3>'+(accId?'单账号月报 · '+accName(accId):'本月汇总 · 成果共享')+'</h3><div class="sub">'+(accId?accName(accId):'全账号')+' 近 30 天自动汇总，复制即可发群</div>'
    +'<div class="report">'+fmtReport(txt)+'</div>'
    +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
-   +'<button class="btn lg" onclick="downloadTxt(window._rpt,\''+fname+'\')">'+svg('doc')+'导出 Markdown</button>'
+   +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
    +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
 }
 
@@ -5782,6 +5809,113 @@ function downloadTxt(t,name){
 }
 
 
+
+/* ============ 分享面板（2026-09-10 师兄：导出 Markdown → 分享，内含 导出 / 转发） ============
+   一级「分享」= 导出文件 / 转发；二级「转发」= 微信版 / 系统分享 / Markdown 原文。
+   背景：报告全文其实是纯文本（无 ** 无 # 无表格），章节写作「一、xxx」、列表写作「- xxx」，
+   所以「微信版」的活儿就是把列表记号与空行收拾干净，粘到微信/群里排版不脏。
+   ⚠️ 只做「复制 / 下载 / 调系统分享面板」这些读动作，绝不替用户发出去（写操作一律人工）。 */
+var _sharePrev='',_shareStep=1;
+
+/* 报告文本 → 微信友好纯文本 */
+function mdToWx(t){
+  var ls=String(t||'').split(/\r?\n/),out=[];
+  for(var i=0;i<ls.length;i++){
+    var ln=ls[i].replace(/[ \t]+$/,'');
+    if(!ln.trim()){if(out.length&&out[out.length-1]!=='')out.push('');continue;}
+    ln=ln.replace(/^- /,'\u00b7 ').replace(/^\s*#{1,6}\s*/,'').replace(/^\s*>\s?/,'')
+         .replace(/\*\*([^*]+)\*\*/g,'$1').replace(/`([^`]+)`/g,'$1')
+         .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'$1 $2');
+    out.push(ln);
+  }
+  while(out.length&&out[out.length-1]==='')out.pop();
+  return out.join('\n');
+}
+
+function shareName(){return window._rptName||'\u5206\u4eab.md';}
+function shareBase(){return shareName().replace(/\.[a-z0-9]+$/i,'');}
+function sharePlain(){return mdToWx(window._rpt||'');}
+
+/* 打开分享面板：先把当前弹窗内容存起来，关闭时还原（modalHost 只有一个坑位） */
+function shareOpen(){
+  _sharePrev=document.getElementById('modalHost').innerHTML;
+  _shareStep=1;shareRender();
+}
+function shareGo(step){_shareStep=step;shareRender();}
+function closeShare(){
+  var h=_sharePrev;_sharePrev='';_shareStep=1;
+  document.getElementById('modalHost').innerHTML=h||'';
+}
+function shareRender(){
+  var h=(_shareStep===1)?shareStep1():shareStep2();
+  document.getElementById('modalHost').innerHTML=
+    '<div class="mask" onclick="if(event.target===this)closeShare()"><div class="modal">'+h+'</div></div>';
+}
+
+function shareHead(icon,title,sub){
+  return '<button class="modal-x" onclick="closeShare()" aria-label="\u5173\u95ed">\u00d7</button>'
+    +'<div class="share-hd"><span class="ic">'+svg(icon)+'</span><h3>'+title+'</h3></div>'
+    +'<div class="sub">'+sub+'</div>';
+}
+
+function shareStep1(){
+  var nm=(window._rpt||'').length;
+  return shareHead('share','\u5206\u4eab',esc(shareBase())+' \u00b7 \u5168\u6587 '+nm.toLocaleString('zh-CN')+' \u5b57')
+    +'<div class="share-list">'
+      +'<button class="share-it" onclick="shareExport()">'
+        +'<span class="ic bl">'+svg('doc')+'</span>'
+        +'<span class="tx"><span class="tt">\u5bfc\u51fa\u6587\u4ef6</span>'
+        +'<span class="ts">\u5b58\u6210 Markdown\uff08.md\uff09\u5230\u624b\u673a / \u7535\u8111\uff0c\u53ef\u518d\u5f53\u6587\u4ef6\u53d1</span></span>'
+        +'<span class="ar">'+svg('chev')+'</span></button>'
+      +'<button class="share-it rec" onclick="shareGo(2)">'
+        +'<span class="ic gr">'+svg('link')+'</span>'
+        +'<span class="tx"><span class="tt">\u8f6c\u53d1<span class="share-tag">\u63a8\u8350</span></span>'
+        +'<span class="ts">\u5fae\u4fe1 / \u98de\u4e66 / \u90ae\u4ef6 \u90fd\u80fd\u53d1 \u00b7 3 \u79cd\u683c\u5f0f\u53ef\u9009</span></span>'
+        +'<span class="ar">'+svg('chev')+'</span></button>'
+    +'</div>'
+    +'<div class="frow"><button class="btn ghost lg" onclick="closeShare()">\u5173\u95ed</button></div>';
+}
+
+function shareStep2(){
+  var canShare=!!navigator.share;
+  var nw=sharePlain().length,nm=(window._rpt||'').length;
+  return shareHead('link','\u8f6c\u53d1','\u9009\u4e00\u79cd\u683c\u5f0f\uff0c\u590d\u5236\u6216\u76f4\u63a5\u8c03\u8d77\u7cfb\u7edf\u5206\u4eab')
+    +'<div class="share-sec">\u63a8\u8350</div>'
+    +'<div class="share-list">'
+      +'<button class="share-it rec" onclick="shareCopyWx()">'
+        +'<span class="ic gr">'+svg('copy')+'</span>'
+        +'<span class="tx"><span class="tt">\u5fae\u4fe1\u7248\u7eaf\u6587\u672c</span>'
+        +'<span class="ts">\u6e05\u6389\u5217\u8868\u8bb0\u53f7\u4e0e\u591a\u4f59\u7a7a\u884c\uff0c\u9ecf\u5230\u5fae\u4fe1\u7fa4 / \u670b\u53cb\u5708\u66f4\u5e72\u51c0 \u00b7 '+nw.toLocaleString('zh-CN')+' \u5b57</span></span>'
+        +'<span class="ar">'+svg('chev')+'</span></button>'
+      +'<button class="share-it" onclick="shareSystem()">'
+        +'<span class="ic bl">'+svg('share')+'</span>'
+        +'<span class="tx"><span class="tt">\u7cfb\u7edf\u5206\u4eab</span>'
+        +'<span class="ts">'+(canShare?'\u8c03\u8d77\u624b\u673a\u539f\u751f\u9762\u677f\uff0c\u4e00\u6b65\u53d1\u5fae\u4fe1 / \u98de\u4e66 / \u90ae\u4ef6\uff0c\u4e0d\u7528\u6765\u56de\u5207 App':'\u5f53\u524d\u73af\u5883\u4e0d\u652f\u6301\u7cfb\u7edf\u5206\u4eab\uff0c\u70b9\u4e86\u4f1a\u6539\u4e3a\u590d\u5236\u5fae\u4fe1\u7248')+'</span></span>'
+        +'<span class="ar">'+svg('chev')+'</span></button>'
+    +'</div>'
+    +'<div class="share-sec">\u5176\u4ed6</div>'
+    +'<div class="share-list">'
+      +'<button class="share-it" onclick="shareCopyMd()">'
+        +'<span class="ic am">'+svg('file')+'</span>'
+        +'<span class="tx"><span class="tt">Markdown \u539f\u6587</span>'
+        +'<span class="ts">\u539f\u6837\u4fdd\u7559\uff0c\u7ed9\u817e\u8baf\u6587\u6863 / IMA / Notion \u8fd9\u7c7b\u8ba4\u683c\u5f0f\u7684\u5730\u65b9 \u00b7 '+nm.toLocaleString('zh-CN')+' \u5b57</span></span>'
+        +'<span class="ar">'+svg('chev')+'</span></button>'
+    +'</div>'
+    +'<div class="frow"><button class="btn ghost lg" onclick="shareGo(1)">\u8fd4\u56de</button>'
+    +'<button class="btn ghost lg" onclick="closeShare()">\u5173\u95ed</button></div>';
+}
+
+function shareExport(){downloadTxt(window._rpt||'',shareName());}
+function shareCopyWx(){copyTxt(sharePlain());}
+function shareCopyMd(){copyTxt(window._rpt||'');}
+function shareSystem(){
+  var t=sharePlain();
+  if(navigator.share){
+    navigator.share({title:shareBase(),text:t}).then(function(){},function(){});
+  }else{
+    copyTxt(t);toast('\u5f53\u524d\u73af\u5883\u4e0d\u652f\u6301\u7cfb\u7edf\u5206\u4eab\uff0c\u5df2\u590d\u5236\u5fae\u4fe1\u7248');
+  }
+}
 
 /* ============ 备份 ============ */
 
