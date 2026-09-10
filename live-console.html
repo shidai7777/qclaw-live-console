@@ -323,15 +323,21 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 
 .ovw .ob.on{border-color:var(--pri);background:var(--pri-soft)}
 
-.ovw .ob .ol{font-size:11px;color:var(--tx3);font-weight:600;display:flex;align-items:center;gap:5px}
+.ovw .ob .ol{font-size:11px;color:var(--tx3);font-weight:600;display:flex;align-items:center;gap:5px;min-width:0}
 
 .ovw .ob .ol .ci{width:8px;height:8px;border-radius:50%}
 
-.ovw .ob .on{font-size:20px;font-weight:800;color:var(--tx1);margin-top:2px}
+.ovw .ob .on{font-size:20px;font-weight:800;color:var(--tx1);margin-top:0}
 
 .ovw .ob .on span{font-size:12px;font-weight:500;color:var(--tx3)}
 
-.ovw .ob .os{font-size:11px;color:var(--tx3);margin-left:auto;font-weight:500;text-align:right;white-space:nowrap}
+/* 2026-09-10 17:4x：数字置顶，标签行（左）+ 状态/说明（右）紧贴其下 */
+.ovw .ob .on+.ol{margin-top:3px}
+
+.ovw .ob .os{font-size:11px;color:var(--tx3);margin-left:auto;font-weight:500;text-align:right;white-space:normal;overflow-wrap:anywhere;flex:0 1 auto;min-width:0}
+
+.ovw .ob .ol>.kl{flex:0 0 auto;white-space:nowrap}
+.ovw .ob .ol .ci{flex:0 0 auto}
 
 .ovw .ob .os .wn{color:#DC2626;font-weight:700}
 
@@ -383,15 +389,18 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 
 /* ---------- kpi ---------- */
 
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
 
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--sh)}
 
-.kpi .l{font-size:12px;color:var(--tx3);display:flex;align-items:center;gap:5px}
+.kpi .l{font-size:12px;color:var(--tx3);display:flex;align-items:baseline;gap:6px;min-width:0}
 
-.kpi .v{font-size:23px;font-weight:800;margin-top:5px;letter-spacing:-.5px}
+.kpi .v{font-size:23px;font-weight:800;margin-top:0;letter-spacing:-.5px}
 
-.kpi .d{font-size:11.5px;color:var(--tx3);margin-left:auto;font-weight:500;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.kpi .d{font-size:11.5px;color:var(--tx3);margin-left:auto;font-weight:500;text-align:right;white-space:normal;overflow-wrap:anywhere;flex:0 1 auto;min-width:0}
+
+/* 标签永不换行、永不被压缩（说明让位） */
+.kpi .kl{flex:0 0 auto;white-space:nowrap}
 
 .kpi .l:last-child{margin-top:4px}
 
@@ -399,7 +408,7 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 
 .down{color:var(--green);font-weight:700}
 
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)} .kpi .v{font-size:20px}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi .v{font-size:20px} .kpi .l{font-size:11.5px;gap:5px} .kpi .d{font-size:10.5px}}
 
 /* 2026-09-08：状态数据卡（今日概览顶部 5 张 · 彩色左条 + 大数字 + 描述 + 底色横线） */
 .stat-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:0 0 14px}
@@ -2972,7 +2981,7 @@ function pieChart(items){
 }
 
 /* 2026-09-10 师兄拍板：数字上移、说明沉底（同总览分类卡互换，说明单独一行右对齐） */
-function kpi(l,v,d){return '<div class="kpi"><div class="l">'+esc(l)+'</div><div class="v">'+v+'</div>'+(d?'<div class="l"><span class="d">'+d+'</span></div>':'')+'</div>';}
+function kpi(l,v,d){return '<div class="kpi"><div class="v">'+v+'</div><div class="l"><span class="kl">'+esc(l)+'</span>'+(d?'<span class="d">'+d+'</span>':'')+'</div></div>';}
 
 /* 带「本周 vs 上周」对比条 + 人话结论的 KPI 卡（类目统计专用） */
 function kpi2(l,v,cur,prev,note,color){
@@ -3871,7 +3880,7 @@ function openTranscript(i){
    +'<div class="tr-body">'+html+'</div>'
    + (t.cut?'<div class="hint" style="margin-top:10px">手机上只带前 1500 字（预览）。要全文：<b>'+esc(t.path||'')+'</b>（回电脑打开该文件）</div>':'')
    +'<div class="frow"><button class="btn ghost" onclick="copyTr()">'+svg('copy')+'复制正文</button>'
-   + (s?'<button class="btn ghost" onclick="closeModal();go(\'data\')">看本场数据</button>':'')
+   + (s?'<button class="btn ghost" onclick="closeModal();go(\'data\')">本场数据</button>':'')
    +'<button class="btn pri" onclick="closeModal()">关闭</button></div>');
 }
 
@@ -4471,32 +4480,25 @@ function viewGuard(){
 
    +'<div class="ob'+(guardFilter==='all'?' on':'')+'" onclick="guardFilter=\'all\';render()">'
 
-   +'<div class="ol">全部账号</div>'
-
    +'<div class="on">'+allN+' <span>个账号</span></div>'
 
-   +'<div class="ol"><span class="os">'+(allW?'<span class="wn">'+allW+' 个需关注</span>':'全部正常')+'</span></div></div>'
+   +'<div class="ol"><span class="kl">全部账号</span><span class="os">'+(allW?'<span class="wn">'+allW+' 个需关注</span>':'全部正常')+'</span></div></div>'
 
    +'<div class="ob'+(guardFilter==='zy'?' on':'')+'" onclick="guardFilter=\'zy\';render()">'
 
-   +'<div class="ol"><span class="ci" style="background:'+CAT_COLOR.zy+'"></span>'+CAT_LABEL.zy+'</div>'
-
    +'<div class="on">'+zyArr.length+' <span>个账号</span></div>'
 
-   +'<div class="ol"><span class="os">'+(zyW?'<span class="wn">'+zyW+' 个需关注</span>':'全部正常')+'</span></div></div>'
+   +'<div class="ol"><span class="ci" style="background:'+CAT_COLOR.zy+'"></span><span class="kl">'+CAT_LABEL.zy+'</span><span class="os">'+(zyW?'<span class="wn">'+zyW+' 个需关注</span>':'全部正常')+'</span></div></div>'
 
    +'<div class="ob'+(guardFilter==='zy2'?' on':'')+'" onclick="guardFilter=\'zy2\';render()">'
 
-   +'<div class="ol"><span class="ci" style="background:'+CAT_COLOR.zy2+'"></span>'+CAT_LABEL.zy2+'</div>'
-
    +'<div class="on">'+zy2Arr.length+' <span>个账号</span></div>'
 
-   +'<div class="ol"><span class="os">'+(zy2W?'<span class="wn">'+zy2W+' 个需关注</span>':'全部正常')+'</span></div></div>'
+   +'<div class="ol"><span class="ci" style="background:'+CAT_COLOR.zy2+'"></span><span class="kl">'+CAT_LABEL.zy2+'</span><span class="os">'+(zy2W?'<span class="wn">'+zy2W+' 个需关注</span>':'全部正常')+'</span></div></div>'
 
    +'<div class="ob'+(guardFilter==='arch'?' on':'')+'" onclick="guardFilter=\'arch\';render()">'
-   +'<div class="ol"><span class="ci" style="background:#94A3B8"></span>已归档</div>'
    +'<div class="on">'+_archN+' <span>个账号</span></div>'
-   +'<div class="ol"><span class="os">'+( _archN? '停播/解除合作' : '暂无')+'</span></div></div>'
+   +'<div class="ol"><span class="ci" style="background:#94A3B8"></span><span class="kl">已归档</span><span class="os">'+( _archN? '停播/解除合作' : '暂无')+'</span></div></div>'
 
    +'</div>';
 
@@ -4935,21 +4937,21 @@ function viewReview(){
      「全部 + 已复盘 + 待复盘」三档足够看清全貌。 */
   +'<div class="ob'+(filterRevStatus==='all'?' on':'')+'" onclick="filterRevStatus=\'all\';render()">'
 
-   +'<div class="ol">全部场次<span class="os">复盘完成率 '+Math.round(doneCnt/all.length*100)+'%</span></div>'
+   +'<div class="on">'+all.length+' <span>场</span></div>'
 
-   +'<div class="on">'+all.length+' <span>场</span></div></div>'
+   +'<div class="ol"><span class="kl">全部场次</span><span class="os">复盘完成率 '+Math.round(doneCnt/all.length*100)+'%</span></div></div>'
 
    +'<div class="ob'+(filterRevStatus==='done'?' on':'')+'" onclick="filterRevStatus=\'done\';render()">'
 
-   +'<div class="ol">已复盘<span class="os">完成率 '+Math.round(doneCnt/all.length*100)+'%</span></div>'
+   +'<div class="on" style="color:var(--green)">'+doneCnt+' <span>场</span></div>'
 
-   +'<div class="on" style="color:var(--green)">'+doneCnt+' <span>场</span></div></div>'
+   +'<div class="ol"><span class="kl">已复盘</span><span class="os">完成率 '+Math.round(doneCnt/all.length*100)+'%</span></div></div>'
 
    +'<div class="ob'+(filterRevStatus==='pending'?' on':'')+'" onclick="filterRevStatus=\'pending\';render()">'
 
-   +'<div class="ol">待复盘<span class="os">今日需处理</span></div>'
+   +'<div class="on" style="color:var(--amber)">'+pendCnt+' <span>场</span></div>'
 
-   +'<div class="on" style="color:var(--amber)">'+pendCnt+' <span>场</span></div></div>'
+   +'<div class="ol"><span class="kl">待复盘</span><span class="os">今日需处理</span></div></div>'
 
    +'</div>';
 
@@ -5587,8 +5589,8 @@ function aggScriptHTML(s, trI){
   }
 
   h+='<div class="frow" style="margin-top:16px">'
-    +(s?'<button class="btn ghost" onclick="aggSwitch(\'data\')">'+svg('grid')+'看本场数据</button>':'')
-    +(s?'<button class="btn ghost" onclick="aggSwitch(\'review\')">'+svg('file')+'看复盘报告</button>':'')
+    +(s?'<button class="btn ghost" onclick="aggSwitch(\'data\')">'+svg('grid')+'本场数据</button>':'')
+    +(s?'<button class="btn ghost" onclick="aggSwitch(\'review\')">'+svg('file')+'复盘报告</button>':'')
     +'<button class="btn pri" onclick="closeModal()">关闭</button></div>';
   return h;
 }
