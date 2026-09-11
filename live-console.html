@@ -5491,6 +5491,8 @@ function showReport(id){
 
   window._rpt=txt;
 
+  window._rptSession=s;   /* 单场报告：可走短结构包 */
+
   window._rptName='复盘_'+accName(s.acc)+'_'+s.date+'.md';
 
   modal('<h3>复盘报告 · 可直接共享</h3><div class="sub">'+esc(accName(s.acc))+' · '+s.date+'</div>'
@@ -5547,7 +5549,7 @@ function aggReviewHTML(s){
     return '<div class="empty" style="padding:20px 0">'+svg('file')+'本场还没写复盘</div>'
       +'<div class="frow"><button class="btn pri" onclick="closeModal();openReview(\''+s.id+'\')">'+svg('edit')+'去写复盘</button><button class="btn ghost" onclick="closeModal()">关闭</button></div>';
   }
-  var txt=buildReport(s); window._rpt=txt; window._rptName='复盘_'+accName(s.acc)+'_'+s.date+'.md';
+  var txt=buildReport(s); window._rpt=txt; window._rptSession=s; window._rptName='复盘_'+accName(s.acc)+'_'+s.date+'.md';
   return '<div class="report" id="rptBox">'+fmtReport(txt)+'</div>'
     +'<div class="frow"><button class="btn ghost" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
     +'<button class="btn pri lg" onclick="copyReportLink()">'+svg('link')+'复制分享链接</button>'
@@ -5745,6 +5747,7 @@ function openWeekly(accId){
 
   var txt=L.join('\n');
   window._rpt=txt;
+  window._rptSession=null;   /* 周报是聚合报告，没有单场 session → 退回全文包 */
   var title=accId?'单账号周报 · '+accName(accId):'本周汇总 · 成果共享';
   var fname=accId?('直播周报_'+accName(accId)+'_'+t+'.md'):('直播周报_'+t+'.md');window._rptName=fname;
   modal('<h3>'+title+'</h3><div class="sub">'+(accId?accName(accId):'全账号')+' 近 7 天自动汇总，复制即可发群</div>'
@@ -5801,6 +5804,7 @@ function openMonthly(accId){
   }
   var txt=L.join('\n');
   window._rpt=txt;
+  window._rptSession=null;   /* 月报同理，退回全文包 */
   var fname=accId?('直播月报_'+accName(accId)+'_'+t+'.md'):('直播月报_'+t+'.md');window._rptName=fname;
   modal('<h3>'+(accId?'单账号月报 · '+accName(accId):'本月汇总 · 成果共享')+'</h3><div class="sub">'+(accId?accName(accId):'全账号')+' 近 30 天自动汇总，复制即可发群</div>'
    +'<div class="report">'+fmtReport(txt)+'</div>'
@@ -6613,6 +6617,87 @@ function _canZip(){
 }
 
 /* 报告文本 -> 可塞进 URL 的短串（Promise，绝不 reject） */
+
+/* ★ 2026-09-11 师兄拍板 A：报告分享「短链接 + 一键转发」
+   —— 为什么以前必须复制到浏览器：?r= 全文包 1008~1198 字符，越过了微信对超长 URL 的识别阈值
+      （约 1000 字符），微信不给蓝链、转发还会折行截断。这是长度越界，不是审美问题。
+   —— 怎么变短：报告正文里固定文案占大头（「最高在线：」「 人 （环比 」「%）」…），
+      所以只带「变量值」，接收端用同一份 buildReport() 把文案拼回来。
+      同一个文件两端同一套模板 → 不存在「模板对不上」的版本漂移。
+   —— 实测：全文包 1008~1198 → 结构包 608~740；URL 总长 706~782，降约 38%，稳过阈值。
+   —— tag 约定：0=老格式全文未压缩 / 1=老格式全文 deflate / 2=结构包 deflate / 3=结构包未压缩。
+      老 tag 全部保留，先前发出去的链接永远打得开。 */
+function reportStructPack(s){
+  var acc=accById(s.acc),pv=prevSession(s),r=s.review||{},_t=(DB.transcripts||[])[s.tr];
+  var o={v:2,a:s.acc||'',n:acc?acc.name:'',c:accCat(acc),d:s.date||'',t:s.liveTime||'',u:s.dur||'',
+    k:[s.peak||0,s.enter||0,s.expose||0,s.views||0,s.avgOnline||0,s.fans||0,s.teamAdd||0],
+    r:[s.expViewRate||'',s.viewFanRate||'',s.viewInterRate||''],
+    f:[s.flowRec||'',s.flowFollow||'',s.flowSearch||'',s.flowShort||'',s.flowHome||'',
+       s.trail||0,s.bagRounds||0,s.bagUsers||0],
+    x:[r.highlight||'',r.problem||'',r.next||'']};
+  if(s.gmv||s.orders)o.g=[s.gmv||0,s.orders||0,s.buyers||0,s.thousandGmv||'',String(s.conv==null?'':s.conv)];
+  if(pv)o.p={d:pv.date||'',k:[pv.peak||0,pv.enter||0,pv.expose||0,pv.views||0,pv.fans||0]};
+  if(_t)o.s=[_t.riskN||0,(_t.risk||[]).map(function(x){return [x.lv==='high'?1:0,x.w,x.n];})];
+  var u8=new TextEncoder().encode(JSON.stringify(o));
+  var plain='3'+_b64u(u8);
+  if(!_canZip())return Promise.resolve(plain);
+  try{
+    var st=new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Response(st).arrayBuffer()
+      .then(function(ab){return '2'+_b64u(new Uint8Array(ab));})
+      .catch(function(){return plain;});
+  }catch(e){return Promise.resolve(plain);}
+}
+
+/* 结构包 → session（顺手注入迷你 DB），再交给 buildReport 拼文案。
+   分享模式全程不 save()，绝不碰访客 localStorage。 */
+function reportSessionFromPack(o){
+  o=o||{};
+  var k=o.k||[],g=o.g||null,f=o.f||[],r=o.r||[],x=o.x||[],pv=o.p||null;
+  var acc={id:o.a||'_share',name:o.n||'未知账号',sheet:o.n||'',cat:o.c||'zy'};
+  DB.accounts=[acc];
+  DB.transcripts=o.s?[{riskN:o.s[0]||0,risk:(o.s[1]||[]).map(function(a){return {lv:(a[0]===1?'high':'mid'),w:a[1],n:a[2]};})}]:[];
+  var s={id:'_share',acc:acc.id,date:o.d||'',liveTime:o.t||'',dur:o.u||'',
+    peak:k[0]||0,enter:k[1]||0,expose:k[2]||0,views:k[3]||0,avgOnline:k[4]||0,fans:k[5]||0,teamAdd:k[6]||0,
+    expViewRate:r[0],viewFanRate:r[1],viewInterRate:r[2],
+    flowRec:f[0],flowFollow:f[1],flowSearch:f[2],flowShort:f[3],flowHome:f[4],
+    trail:f[5]||0,bagRounds:f[6]||0,bagUsers:f[7]||0,tr:0,
+    review:{highlight:x[0]||'',problem:x[1]||'',next:x[2]||''}};
+  if(g){s.gmv=g[0]||0;s.orders=g[1]||0;s.buyers=g[2]||0;s.thousandGmv=g[3]||'';s.conv=g[4]||'';}
+  DB.sessions=[s];
+  if(pv){
+    var pk=pv.k||[];
+    DB.sessions=[{id:'_prev',acc:acc.id,date:pv.d||'',peak:pk[0]||0,enter:pk[1]||0,
+      expose:pk[2]||0,views:pk[3]||0,fans:pk[4]||0},s];
+  }
+  return s;
+}
+
+/* 分享页打不开时的人话提示 */
+function shareFail(){
+  SHARE.ready=false;
+  document.getElementById('view').innerHTML='<div class="sharepg"><div class="card">'
+    +'<div class="card-h"><div class="ic" style="background:#EEF0FF;color:#4F46E5">'+svg('alert')+'</div><h3>这个链接打不开</h3></div>'
+    +'<div class="hint">多半是链接被聊天工具截断了（转发时折行或加了省略号），或者浏览器太老不支持解压。<br>让发给你的人重新复制一次完整链接，或改成「分享 → 微信版纯文本」直接发文字。</div>'
+    +'<div class="frow"><button class="btn pri lg" onclick="location.reload()">'+svg('refresh')+'重新加载</button></div>'
+    +'</div></div>';
+}
+
+/* 一键转发：手机上调起系统分享面板，直接选微信发出去（不用复制、不用粘）。
+   桌面端多数没有 Web Share，自动降级为「复制 + 提示」。用户取消（AbortError）不打扰。 */
+function shareToWechat(){
+  var url=window._shareURL||'';
+  if(!url){toast('链接还没准备好');return;}
+  if(navigator.share){
+    navigator.share({title:'直播复盘报告',text:'直播复盘报告',url:url}).catch(function(e){
+      if(e&&e.name==='AbortError')return;
+      copyTxt(url);toast('系统分享没能唤起，已复制链接，粘到微信即可');
+    });
+    return;
+  }
+  copyTxt(url);toast('当前浏览器不支持一键转发，已复制链接');
+}
+
 function reportPack(txt){
   var u8=new TextEncoder().encode(String(txt||''));
   var plain='0'+_b64u(u8);
@@ -6630,11 +6715,17 @@ function reportUnpack(pack){
   return new Promise(function(ok,no){
     try{
       var p=String(pack||''),tag=p.charAt(0),u8=_unb64u(p.slice(1));
-      if(tag==='0'){ok(new TextDecoder().decode(u8));return;}
-      if(tag!=='1'||!_canZip()){no(new Error('unsupported'));return;}
+      if(tag==='0'){ok({kind:'text',txt:new TextDecoder().decode(u8)});return;}
+      if(tag==='3'){ok({kind:'data',obj:JSON.parse(new TextDecoder().decode(u8))});return;}
+      if(tag!=='1'&&tag!=='2'){no(new Error('unsupported'));return;}
+      if(!_canZip()){no(new Error('unsupported'));return;}
       var st=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
       new Response(st).arrayBuffer().then(
-        function(ab){ok(new TextDecoder().decode(new Uint8Array(ab)));},
+        function(ab){
+          var txt=new TextDecoder().decode(new Uint8Array(ab));
+          if(tag==='1'){ok({kind:'text',txt:txt});return;}
+          try{ok({kind:'data',obj:JSON.parse(txt)});}catch(e2){no(new Error('corrupt'));}
+        },
         function(){no(new Error('corrupt'));});
     }catch(e){no(new Error('decode'));}
   });
@@ -6642,17 +6733,23 @@ function reportUnpack(pack){
 
 function reportShareURL(pack){return location.origin+location.pathname+'?r='+pack;}
 
-/* 报告弹窗里的「复制分享链接」（报告 / 单场 / 周报 / 月报 四个弹窗都挂了这个按钮） */
+/* 报告弹窗里的「复制分享链接」（报告 / 单场 / 周报 / 月报 四个弹窗都挂了这个按钮）
+   单场报告走结构包（短）；周报/月报这类聚合报告没有单场 session，退回全文包。
+   用 buildReport(ses)===window._rpt 复核一次：状态漂移就自动退回全文包，绝不发错内容。 */
 function copyReportLink(){
   var t=window._rpt||'';
   if(!t){toast('报告还没生成');return;}
+  var ses=window._rptSession||null,js=null;
+  if(ses){try{if(buildReport(ses)===t)js=reportStructPack(ses);}catch(e){js=null;}}
   _sharePrev=document.getElementById('modalHost').innerHTML;   /* 复用分享面板的还原机制，退出时回到原报告 */
   toast('正在生成分享链接…');
-  reportPack(t).then(function(pack){
+  /* 结构包与全文包都算一遍，谁短用谁：极短报告（就几行）时全文包反而更短，保证不会越改越长 */
+  Promise.all([js||Promise.resolve(''),reportPack(t)]).then(function(rr){
+    var pack=(rr[0]&&rr[0].length<rr[1].length)?rr[0]:rr[1];
     var url=reportShareURL(pack);
     window._shareURL=url;
     copyTxt(url);
-    var warn=pack.length>3500
+    var warn=pack.length>950
       ?'<div class="hint" style="color:#D97706">⚠️ 这条链接偏长（'+pack.length+' 字符），个别聊天工具可能折行。真发不出去就用「分享 → 微信版纯文本」直接发文字。</div>'
       :'';
     modal('<h3>报告独立分享链接</h3>'
@@ -6660,28 +6757,27 @@ function copyReportLink(){
       +'<textarea class="share-url" readonly onclick="this.select()">'+esc(url)+'</textarea>'
       +warn
       +'<div class="hint" style="margin-top:10px">对方点开就是这张报告，不用装东西、不用配 Key；<br>链接自带内容快照，之后再改数据也不会变。</div>'
-      +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._shareURL)">'+svg('copy')+'再复制一次</button>'
+      +'<div class="frow"><button class="btn pri lg" onclick="shareToWechat()">'+svg('share')+'转发到微信</button>'
       +'<button class="btn lg" onclick="closeShare()">'+svg('doc')+'返回报告</button>'
       +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
   });
 }
 
-/* 分享页：进入只读模式并解包渲染 */
+/* 分享页：进入只读模式并解包渲染（0/1 全文包 与 2/3 结构包都吃） */
 function startSharePage(pack){
   SHARE.on=true;SHARE.ready=false;SHARE.txt='';
   document.body.classList.add('share-mode');
   document.title='直播复盘报告';
   document.getElementById('view').innerHTML=
     '<div class="sharepg"><div class="hint" style="padding:28px 0;text-align:center">正在打开报告…</div></div>';
-  reportUnpack(pack).then(function(txt){
-    SHARE.txt=txt||'';SHARE.ready=true;renderShare();
-  },function(){
-    document.getElementById('view').innerHTML='<div class="sharepg"><div class="card">'
-      +'<div class="card-h"><div class="ic" style="background:#EEF0FF;color:#4F46E5">'+svg('alert')+'</div><h3>这个链接打不开</h3></div>'
-      +'<div class="hint">多半是链接被聊天工具截断了（转发时折行或加了省略号），或者浏览器太老不支持解压。<br>让发给你的人重新复制一次完整链接，或改成「分享 → 微信版纯文本」直接发文字。</div>'
-      +'<div class="frow"><button class="btn pri lg" onclick="location.reload()">'+svg('refresh')+'重新加载</button></div>'
-      +'</div></div>';
-  });
+  reportUnpack(pack).then(function(res){
+    var txt='';
+    try{
+      txt=(res&&res.kind==='data')?buildReport(reportSessionFromPack(res.obj)):String((res&&res.txt)||'');
+    }catch(e){txt='';}
+    if(!txt){shareFail();return;}
+    SHARE.txt=txt;SHARE.ready=true;renderShare();
+  },function(){shareFail();});
 }
 
 /* 分享页正文渲染（只读，永不写 #view 之外的东西） */
