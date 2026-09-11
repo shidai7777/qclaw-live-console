@@ -450,7 +450,7 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 .mg-item.fail .mg-k{color:var(--red);opacity:.75}
 .mg-item.grey{color:var(--tx2)}
 .rt-live{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex:none;animation:mgpulse 2s infinite}
-/* 2026-09-10：实时监控台 —— 4 列信号卡（卡内右上角标图标） */
+/* 2026-09-10：直播实时监控台 —— 4 列信号卡（卡内右上角标图标） */
 .stat-cards.c4{grid-template-columns:repeat(4,1fr)}
 .stat-card .sc-i{position:absolute;right:9px;top:9px;width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
 .stat-card .sc-i svg{width:13px;height:13px;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
@@ -1362,7 +1362,7 @@ function rtDurMin(a){
 
 function liveStatus(a,todayS){
 
-  /* ★ 2026-09-08：优先信实时工作台真状态（accounts[].rt，数据桥从 127.0.0.1:8765 并入）。
+  /* ★ 2026-09-08：优先信直播实时监控台真状态（accounts[].rt，数据桥从 127.0.0.1:8765 并入）。
      以前没有 rt，只能拿「开播后 4 小时窗口 + 今日有守护」去猜 live / lost，
      于是播完的显示"直播中"、已停用的报"断播"（师兄 12:22 指出）。
      有 rt 就直接读 phase，不再猜；没有 rt（本机实时台没开）才降级回下面的推断。 */
@@ -1557,13 +1557,13 @@ function sysHealthCard(){
 }
 
 
-/* ============ 管理条 + 实时监控台（2026-09-10） ============
-   来由：师兄要「把管理条和实时监控台的数据和图标放进来，用我们有的数据」。
+/* ============ 管理条 + 直播实时监控台（2026-09-10） ============
+   来由：师兄要「把管理条和直播实时监控台的数据和图标放进来，用我们有的数据」。
    铁律：字段只取 workbench_data.json 里真实存在的五个源 ——
         rtKpi / guardHealth / procheck / autoRuns / accounts[].rt，
         后端没有的一律不画，不编数、不推算。
    分工：管理条 = 顶部常驻细条，图标 + 数字，一眼看全局；
-        实时监控台 = 今日概览里的详版，信号卡 + 明细行 + 在役账号实时态表。
+        直播实时监控台 = 今日概览里的详版，信号卡 + 明细行 + 在役账号实时态表。
    注意：这些是「快照类」字段，云同步包里被置 null（见 syncPush 白名单），
         只有 workbench_data.json 这一路有；取不到时整块不渲染，不留空壳。 */
 
@@ -1643,7 +1643,7 @@ function renderMgmtBar() {
   host.innerHTML = h;
 }
 
-/* --- 实时监控台：今日概览里的详版 --- */
+/* --- 直播实时监控台：今日概览里的详版 --- */
 function rtConsoleCard() {
   var k = DB.rtKpi, g = DB.guard, p = DB.procheck, ar = DB.autoRuns;
   if (!k && !g && !p && !ar) return '';
@@ -1656,7 +1656,7 @@ function rtConsoleCard() {
   var h = '<div class="card" style="margin-bottom:12px">';
   h += '<div class="card-h">'
     + '<div class="ic" style="background:#E0F2FE">' + svg('radio') + '</div>'
-    + '<h2 style="font-size:14px">实时监控台</h2>'
+    + '<h2 style="font-size:14px">直播实时监控台</h2>'
     + '<span class="pill ' + freshLv + '"><i class="rt-live"></i>' + esc(freshTxt) + '</span>'
     + '<span style="font-size:11px;color:var(--tx3)">数据源 workbench_data.json</span>'
     + '</div>';
@@ -6762,7 +6762,7 @@ function applySnapshot(snap){
       auth:'ok',lastGuard:r.lastGuard||today(),liveTime:r.liveTime||'',guard:r.guard||'',auto:r.auto||'',
       week:[1,2,3,4,5,6,7],note:'',
       status:r.status||'active',archivedDate:r.archivedDate||'',lastLiveDate:r.lastLiveDate||'',archiveNote:r.archiveNote||'',
-      /* 实时工作台真状态（2026-09-08）：数据桥从 127.0.0.1:8765 并入，含 phase / 真实开播下播时刻。
+      /* 直播实时监控台真状态（2026-09-08）：数据桥从 127.0.0.1:8765 并入，含 phase / 真实开播下播时刻。
          有它 liveStatus 就读真值，不再用 4 小时窗口猜「直播中/断播」。 */
       rt:r.rt||null};
     if(rec.status==='dormant'||rec.status==='terminated') accsArch.push(rec); else accs.push(rec);
@@ -6845,7 +6845,7 @@ function applySnapshot(snap){
   DB.guard=snap.guardHealth||null;
   DB.procheck=snap.procheck||null;
   DB.autoRuns=snap.autoRuns||null;
-  /* 实时工作台真状态汇总（2026-09-08）：live_now / cdp_alive / guard_alive / gen_at */
+  /* 直播实时监控台真状态汇总（2026-09-08）：live_now / cdp_alive / guard_alive / gen_at */
   DB.rtKpi=snap.rtKpi||null;
   /* 轻量实时通道标记：手机端据此去 JSONBin 公共 bin 拉真状态（免 Key、零 deploy、零积分） */
   DB.rtBin=snap.rtBin||null;
