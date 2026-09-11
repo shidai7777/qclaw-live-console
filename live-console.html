@@ -579,6 +579,18 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 .tr-item:active{border-color:var(--pri);background:#F5F3FF}
 .tr-pre{font-size:12.5px;color:var(--tx3);line-height:1.55;margin-top:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tr-risk{margin-top:7px}
+/* 风险词胶囊（2026-09-10 师兄拍板：胶囊只显「词 ×次数」，点开看时间节点+原话） */
+.risk-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.risk-chip{display:inline-flex;align-items:center;border-radius:20px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:filter .15s}
+.risk-chip.fail{background:#FDECEC;color:#B91C1C;border-color:#F7C9C9}
+.risk-chip.warn{background:#FEF6E7;color:#8A5A08;border-color:#FBE3B8}
+.risk-chip:active{filter:brightness(.95)}
+.risk-det{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-top:7px;background:#FAFAFD}
+.risk-row{display:flex;gap:8px;font-size:12px;margin:5px 0;align-items:baseline}
+.risk-min{flex:0 0 auto;color:var(--pri);background:var(--pri-soft);border-radius:5px;padding:1px 6px;font-size:11px;font-weight:600;white-space:nowrap}
+.risk-tx{color:var(--tx2);word-break:break-word;flex:1;min-width:0;line-height:1.6}
+.risk-cat{font-size:11px;color:var(--tx3)}
+.risk-sug{font-size:12px;color:#0F6E56;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line)}
 .tr-riskbox{background:var(--amber-soft);border:1px solid #FBE3B8;border-radius:10px;padding:9px 11px;margin:10px 0 4px}
 .tr-riskbox .rt{font-size:11.5px;font-weight:700;color:#8A5A08;margin-bottom:6px}
 .tr-riskbox .rb{display:flex;gap:6px;flex-wrap:wrap}
@@ -746,7 +758,8 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 .agg-tabs .agg-tab.on{background:#fff;color:var(--pri-dark);font-weight:700;box-shadow:0 1px 3px rgba(20,24,60,.12)}
 .agg-tabs .agg-tab:active{background:#E9EBF5}
 .agg-tabs .agg-tab.on:active{background:#fff}
-@media(max-width:768px){.agg-tabs{width:100%}.agg-tabs .agg-tab{min-height:44px;font-size:14px}}
+@media(max-width:768px){.agg-tabs{width:100%}.agg-tabs .agg-tab{min-height:44px;font-size:14px}
+  .risk-chip{min-height:38px;padding:8px 13px;font-size:13px}}
 </style>
 
 <script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
@@ -805,7 +818,6 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
         <button class="btn" title="云同步" onclick="openSyncSettings()" data-page-node-id="ZcKstrIb3buoFA2j0CjjY2"><span class="sync-dot off" id="syncDot" data-page-node-id="ouVQVLOiKoDBTdo7ITnMDr"></span><span class="btn-t" data-page-node-id="KP4nUaQGL11BkwuD7JgLfN">云同步</span></button>
 
         <a class="btn ghost" href="https://docs.qq.com/sheet/DZnJCbkFOU0JyYXJk" target="_blank" rel="noopener" title="腾讯文档 · 直播经营日报（六页明细：开播总览/三日/七日/历史明细/同步日志/已归档）" style="text-decoration:none" data-page-node-id="qclawDocdashLink"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span class="btn-t">经营日报六页</span></a>
-
 
       </div>
 
@@ -1240,20 +1252,6 @@ function snapAgeH(){
 
 }
 
-function ageText(h){
-
-  if(h<1)return Math.max(1,Math.round(h*60))+' 分钟前';
-
-  if(h<48)return Math.floor(h)+' 小时前';
-
-  return Math.floor(h/24)+' 天前';
-
-}
-
-/* 同一个时长的另一种说法：接在「已 … 没更新」后面用，不该带「前」 */
-
-function ageSpan(h){return ageText(h).replace('前','');}
-
 function shortDate(d){d=String(d||'');return d.length>5?d.slice(5):d;}
 
 function renderFreshness(){
@@ -1285,7 +1283,7 @@ function renderFreshness(){
 
     host.className='freshbar bad';
 
-    host.innerHTML=svg('alert')+'<span class="fb-t"><b>已 '+ageSpan(h)+'没更新</b> · 停在 '+esc(exp)+'。同步大概率断了，别拿这份数据做判断。</span>'+btn;
+    host.innerHTML=svg('alert')+'<span class="fb-t"><b>数据没更新</b> · 停在 '+esc(exp)+'。同步大概率断了，别拿这份数据做判断。</span>'+btn;
 
     return;
 
@@ -1295,7 +1293,7 @@ function renderFreshness(){
 
     host.className='freshbar warn';
 
-    host.innerHTML=svg('alert')+'<span class="fb-t"><b>已 '+ageSpan(h)+'没更新</b> · 停在 '+esc(exp)+(dd?(' · 覆盖至 '+esc(dd)):'')+'，今天的场次可能还没进来。</span>'+btn;
+    host.innerHTML=svg('alert')+'<span class="fb-t"><b>数据没更新</b> · 停在 '+esc(exp)+(dd?(' · 覆盖至 '+esc(dd)):'')+'，今天的场次可能还没进来。</span>'+btn;
 
     return;
 
@@ -1303,7 +1301,7 @@ function renderFreshness(){
 
   host.className='freshbar';
 
-  host.innerHTML='<span class="fb-dot"></span><span class="fb-t">数据更新于 '+esc(exp)+' · '+ageText(h)+(dd?(' · 覆盖至 '+esc(dd)):'')+'</span>';
+  host.innerHTML='<span class="fb-dot"></span><span class="fb-t">数据更新于 '+esc(exp)+(dd?(' · 覆盖至 '+esc(dd)):'')+'</span>';
 
 }
 
@@ -1700,77 +1698,13 @@ function rtConsoleCard() {
   }
   if (tiles) h += '<div class="stat-cards c4">' + tiles + '</div>';
 
-  /* 明细行 */
-  var det = '';
-  if (g) {
-    var gl = guardLevel() || 'grey';
-    det += '<div class="sh-row"><span class="sh-k">守护</span><span class="sh-v">'
-      + '昨日 ' + (g.date ? shortDate(g.date) : '—') + ' 采样 · 开播 ' + (g.opened || 0) + ' · 成功 ' + (g.success || 0)
-      + ' · 进行中 ' + (g.inProgress || 0) + ' · 待办 ' + (g.pending || 0) + ' · 登录失效 ' + (g.loginExpired || 0)
-      + (g.gapN ? (' · <b style="color:var(--red)">缺口 ' + g.gapN + ' 场</b>') : '')
-      + (g.recheckN ? (' · 待复查 ' + g.recheckN + ' 个') : '')
-      + '</span><span class="pill ' + rtPillCls(gl) + '">' + (g.trustworthy ? '可信' : '数据不可信') + '</span></div>';
-    if (g.rateNote) det += '<div style="font-size:11px;color:var(--tx3);margin:0 0 4px">口径：' + esc(g.rateNote) + '</div>';
-  }
-  if (p) {
-    det += '<div class="sh-row"><span class="sh-k">自检</span><span class="sh-v">'
-      + (p.date ? shortDate(p.date) + ' ' : '') + esc(p.time || '—') + ' 采样 · 活跃 ' + (p.active || 0) + ' · 窗口 ' + (p.window || 0)
-      + ' · 存活 ' + (p.alive || 0) + ' · 重启 ' + (p.restarted || 0)
-      + ((p.restartedList && p.restartedList.length) ? ('（' + esc(p.restartedList.join('、')) + '）') : '')
-      + ' · 班次 ' + esc(p.sched || '—') + ' · 下次 ' + esc(p.expect || '—')
-      + '</span><span class="pill ' + rtPillCls(rtPcLevel(p)) + '">' + (p.missed ? '漏跑了' : '正常') + '</span></div>';
-  }
-  if (ar) {
-    var cc = ar.counts || {};
-    var bad = (ar.items || []).filter(function (i) { return i.state === 'fail'; }).slice(0, 3);
-    det += '<div class="sh-row"><span class="sh-k">自动</span><span class="sh-v">'
-      + '采样 ' + esc(ar.generatedAt || '—') + ' · 共 ' + (ar.total || 0) + ' 个任务 · 正常 ' + (cc.ok || 0)
-      + ' · 失败 ' + (cc.fail || 0) + ' · 告警 ' + (cc.warn || 0) + ' · 超期 ' + (cc.stale || 0) + ' · 未跑 ' + (cc.never || 0)
-      + '</span><span class="pill ' + rtPillCls(rtAutoLevel(ar)) + '">' + (rtAutoLevel(ar) === 'ok' ? '正常' : '需处理') + '</span></div>';
-    bad.forEach(function (i) {
-      /* note 里前缀「最近(连续)失败 N 次：」跟本行左边重复，剥掉只留真正的报错正文 */
-      var nt = String(i.note || '').replace(/^最近(连续)?失败\s*\d+\s*次\s*[：:]\s*/, '');
-      if (nt.length > 44) nt = nt.slice(0, 44) + '…';
-      det += '<div class="sh-item fail"><div class="t">' + esc(i.name) + '</div><div class="s">'
-        + '计划 ' + esc(i.sched || '—') + ' · 最近 ' + esc(i.lastRunAt || '—') + ' · 连续失败 ' + (i.consecFail || 0) + ' 次'
-        + (nt ? (' · ' + esc(nt)) : '') + '</div></div>';
-    });
-    if ((cc.fail || 0) > bad.length) {
-      det += '<div style="font-size:11.5px;color:var(--tx3);margin:4px 0 0">另有 ' + ((cc.fail || 0) - bad.length) + ' 个失败任务，点右上「详情」看全量</div>';
-    }
-  }
-  if (det) h += '<div style="margin-top:10px">' + det + '</div>';
-
-  /* 在役账号实时态表 */
-  var act = (DB.accounts || []).filter(function (a) { return a.status === 'active'; });
-  if (act.length) {
-    var order = { '直播中': 0, '守护中': 1, '收尾中': 2, '守护静止': 3, '未启动': 4, '已停用': 5 };
-    act.sort(function (x, y) {
-      var xp = (x.rt && x.rt.phase) || '未启动', yp = (y.rt && y.rt.phase) || '未启动';
-      var ox = (order[xp] === undefined ? 9 : order[xp]), oy = (order[yp] === undefined ? 9 : order[yp]);
-      return ox - oy || String(x.name).localeCompare(String(y.name));
-    });
-    h += '<div style="font-size:12.5px;font-weight:700;color:var(--tx2);margin:14px 0 6px">在役账号实时态（' + act.length + '）</div>';
-    h += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="tbl"><thead><tr>'
-      + '<th>账号</th><th>实时态</th><th>守护</th><th>登录</th><th>收尾</th><th>峰值</th><th>复盘</th>'
-      + '</tr></thead><tbody>';
-    act.forEach(function (a) {
-      var r = a.rt || {};
-      var ph = r.phase || '未启动';
-      var pc = RT_PHASE[ph] || '#94A3B8';
-      var endT = r.ended_at ? String(r.ended_at).slice(11, 16) : '—';
-      var pk = (r.peak === null || r.peak === undefined) ? '—' : String(r.peak);
-      h += '<tr><td style="font-weight:600">' + esc(a.name) + '</td>'
-        + '<td><span style="color:' + pc + ';font-weight:700">' + esc(ph) + '</span></td>'
-        + '<td>' + esc(r.guard_stage || '—') + '</td>'
-        + '<td>' + (r.login_bad ? '<span style="color:var(--red);font-weight:700">异常</span>' : '正常') + '</td>'
-        + '<td>' + esc(endT) + '</td><td>' + esc(pk) + '</td>'
-        + '<td>' + (r.review_done ? '<span style="color:var(--green);font-weight:700">已复盘</span>' : esc(r.review_at || '—')) + '</td></tr>';
-    });
-    h += '</tbody></table></div>';
-    h += '<div style="font-size:11px;color:var(--tx3);margin-top:7px">实时态来自实时监控屏采样；「收尾」为最近一次守护收尾时间，「复盘」为最近一次复盘时点。</div>';
-  }
-
+  /* 明细行（守护 / 口径 / 自检 / 自动 + 失败任务明细）：2026-09-10 师兄拍板删除——
+     与底部「体系健康」卡完全重复，「详情」里还有全量，今日概览不再堆一遍。
+     删掉的判定逻辑仍在 sysHealthCard()/sysHealth() 里跑，只是不再在这张卡里展开。 */
+  /* 在役账号实时态表（11 行明细）：2026-09-10 师兄拍板删除——
+     同一份数据「账号守护」tab（viewGuard）里有完整版，今日概览不重复摊开；
+     上面四张信号卡已经把在播/守护/自检/自动的总量交代清楚了。
+     读数来源仍在 DB.accounts[].rt，删掉的只是展示层。 */
   h += '</div>';
   return h;
 }
@@ -1800,9 +1734,8 @@ function alertBanner(){
 function tgBeat(k){
   var el=document.getElementById('beatD'+k);if(!el)return;
   var wasOpen=(el.style.display==='block');
-  /* 手风琴：先收起所有档位容器，再按需展开当前档——点新格子时上一个自动收起（2026-09-10 师兄拍板，免得小屏上文字累加） */
-  var _all=document.querySelectorAll('div[id^="beatD"]');
-  for(var _i=0;_i<_all.length;_i++){_all[_i].style.display='none';}
+  /* 手风琴：先收起所有明细容器（与风险词明细共用一组），再按需展开当前档——点新格子时上一个自动收起（2026-09-10 师兄拍板，免得小屏上文字累加） */
+  collapseDetails();
   if(wasOpen)return;
   var hits=(window.__beatHits||[]).filter(function(x){return Math.floor(x.m/15)*15===k;});
   if(!hits.length){el.innerHTML='<div class="hint">该时段无逐字稿明细（分篇稿可能缺时间戳）</div>';el.style.display='block';return;}
@@ -1814,6 +1747,22 @@ function tgBeat(k){
       +'<span style="color:var(--tx2)">'+esc(x.txt)+'</span></div>';
   });
   el.innerHTML=s;el.style.display='block';
+}
+
+/* 收起所有明细容器：引导节拍档（beatD*）+ 风险词明细（riskD*）共用一组手风琴 */
+function collapseDetails(){
+  var _all=document.querySelectorAll('div[id^="beatD"],div[id^="riskD"]');
+  for(var _i=0;_i<_all.length;_i++){_all[_i].style.display='none';}
+}
+
+/* 点风险词胶囊展开该词每次命中的「第 N 分钟 + 原话」（2026-09-10 师兄拍板：
+   折叠逻辑与「互动引导节拍」一致——同时只开一个，再点自身收起） */
+function tgRisk(i){
+  var el=document.getElementById('riskD'+i);if(!el)return;
+  var wasOpen=(el.style.display==='block');
+  collapseDetails();
+  if(wasOpen)return;
+  el.style.display='block';
 }
 
 /* 15 天柱状图点选聚焦：点哪根柱其余变半透明，再点取消（2026-09-09 师兄拍板） */
@@ -2105,9 +2054,10 @@ function viewTodo(){
 
 
 
-  /* ---- 0. 异常主动告警横幅：不翻明细也能看到要处理什么（P1-2）---- */
-
-  h+=alertBanner();
+  /* ---- 0. 异常主动告警横幅（P1-2）：2026-09-10 师兄拍板删除——
+     横幅内容基本是「登录态 N 天没刷」的误报（守护看板 09-08 起断供、lastGuard 失真），
+     真要看异常有底部「体系健康」卡 + 「详情」。函数 alertBanner/openAlerts/buildAlerts
+     都留在原位，想恢复把这行加回来即可：h+=alertBanner(); ---- */
 
   /* ---- 0.5 状态数据卡 5 张：下一场 / 直播中 / 守护 / 复盘 / 数据新鲜（2026-09-08）---- */
 
@@ -2120,26 +2070,11 @@ function viewTodo(){
 
    +'<span class="pill grey">'+DB.accounts.length+' 个账号</span></div>';
 
-  if(authAlerts.length){
-
-    h+='<div style="font-size:12px;font-weight:600;color:#DC2626;margin-bottom:6px">状态预警（'+authAlerts.length+'）</div>';
-
-    authAlerts.forEach(function(i){
-
-      h+='<div class="todo '+(i.lv==='over'?'over':'warn')+'" style="margin-bottom:6px">'
-
-       +'<div class="dot"></div><div class="tc"><div class="tt">'+esc(i.t)+'</div><div class="ts">'+esc(i.s)+'</div></div>'
-
-       +'<button class="btn sm '+(i.lv==='over'?'danger':'pri')+'" onclick="'+i.f+'">'+i.b+'</button></div>';
-
-    });
-
-  }else{
-
-    h+='<div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px">全部账号状态正常</div>';
-
-  }
-
+  /* 状态预警明细（NN 条卡片 + 「标记已刷新」按钮）：2026-09-10 师兄拍板删除——
+     这几条基本是「登录态 N 天未刷新」的误报（守护看板 09-08 起断供、lastGuard 失真），
+     而且下面第三张小卡已经给了「状态预警 N 个账号」这个数。
+     操作入口没丢：「账号守护」tab 每个账号卡上仍有「已刷新」（viewGuard→markAuth），
+     周报导出（openWeekly）也照旧把预警条目列进文本。 */
   /* 账号状态总览：今日开播 / 今日休息 */
 
   var liveToday=planned.length,restToday=DB.accounts.length-liveToday;
@@ -2200,19 +2135,36 @@ function viewTodo(){
 
     var _dm=rtDurMin(a);
 
-    if(ses && ses.dur){
+    /* 2026-09-10 师兄拍板：本列给「时间」，不带「已播」前缀。口径按原话定死 ——
+       已下播的给「实际下播具体时刻」（信标 rt.ended_at 的 HH:MM），
+       在播的只能给已播时长（还没下播，没有下播时刻可言）。
+       注意：数据桥 dataDate 是 09-09，ended_at 也就停在 09-08/09-09 —— 那是各号
+       「最近一次下播」的真时刻、不是今天的，所以不做「必须今天」的过滤；
+       完整日期挂在 title 上，免得被当成今天的时刻。 */
 
-      dataSync='<span class="sync-ok">'+esc(ses.dur)+'</span>';
+    var _endFull=(a.rt&&a.rt.ended_at)?String(a.rt.ended_at).replace('T',' ').slice(0,16):'';
 
-    }else if(st==='live'){
+    var _endT=_endFull?_endFull.slice(11,16):'';
+
+    if(st==='live'){
 
       /* 2026-09-09：在播用信标 started_at 现算已播时长（此前只显示"直播中"两个字） */
 
-      dataSync='<span class="sync-wait">已播 '+(_dm?fmtDurMin(_dm):'…')+'</span>';
+      dataSync='<span class="sync-wait">'+(_dm?fmtDurMin(_dm):((ses&&ses.dur)?esc(ses.dur):'…'))+'</span>';
+
+    }else if(_endT){
+
+      /* 已下播：直接给实际下播的具体时间，不再摆"—"（2026-09-10 师兄拍板） */
+
+      dataSync='<span class="sync-na" title="最近一次下播 '+esc(_endFull)+'">'+esc(_endT)+'</span>';
+
+    }else if(ses && ses.dur){
+
+      dataSync='<span class="sync-ok">'+esc(ses.dur)+'</span>';
 
     }else if(_dm!=null&&(st==='review_wait'||st==='done')){
 
-      /* 下播后表还没落：显示本场总时长（started→ended），不再是"—" */
+      /* 下播后表还没落、信标又没给下播时刻：只能给本场总时长（started→ended） */
 
       dataSync='<span class="sync-na">'+fmtDurMin(_dm)+'</span>';
 
@@ -2294,7 +2246,7 @@ function viewTodo(){
 
       var ses=null;for(var i=0;i<todayS.length;i++){if(todayS[i].acc===a.id){ses=todayS[i];break;}}
 
-      var rv=ses.review||{};
+      var rv=(ses&&ses.review)||{};
 
       h+='<div class="todo" style="background:var(--green-soft);border-color:#C8EED5"><div class="dot" style="background:var(--green)"></div><div class="tc"><div class="tt" style="color:var(--green)">'+esc(a.name)+' 复盘报告已同步</div><div class="ts">'+(rv.highlight?('亮点：'+esc(rv.highlight.slice(0,60))+(rv.highlight.length>60?'…':'')):'报告已生成')+'</div></div></div>';
 
@@ -3813,7 +3765,7 @@ function viewScript(){
   h+='<div class="kpis">'
    + kpi('转写稿',all.length+' 篇',Object.keys(aset).length+' 个账号')
    + kpi('覆盖日期',dArr.length+' 天',dArr.length?(shortDate(dArr[0])+' ~ '+shortDate(dArr[dArr.length-1])):'&nbsp;')
-   + kpi('无违禁词场次',cleanBound+' 篇',bound?pct(cleanBound/bound*100,0)+' 无违规词':'暂无')
+   + kpi('无违规词',cleanBound+' 篇',bound?pct(cleanBound/bound*100,0):'暂无')
    + kpi('风险词命中',riskN+' 篇',riskN?'点了看是哪句':'干干净净')
    +'</div>';
   h+='<div class="hint" style="margin-top:2px">正文只带前 1500 字（'+cutN+' 篇为预览），够看开场/留人/逼单的节奏；'
@@ -3902,11 +3854,29 @@ function openTranscript(i){
   var s=trSessOf(i);
   var riskHtml='';
   if(t.riskN>0){
-    riskHtml='<div class="tr-riskbox"><div class="rt">⚠ 风险词命中（关键词粗筛，人工复核为准）</div><div class="rb">'
-      + (t.risk||[]).map(function(r){
-        return '<span class="pill '+(r.lv==='high'?'fail':'warn')+'">'+esc(r.w)+' ×'+r.n+'</span>';
-      }).join(' ')
-      +'</div></div>';
+    riskHtml='<div style="font-weight:700;font-size:13px;color:#8A5A08;margin:10px 0 2px">⚠ 风险词命中（关键词粗筛，人工复核为准）</div><div class="risk-chips">'
+      + (t.risk||[]).map(function(r,i){
+        return '<span class="risk-chip '+(r.lv==='high'?'fail':'warn')+'" onclick="tgRisk('+i+')">'+esc(r.w)+' ×'+r.n+'</span>';
+      }).join('')
+      +'</div>'
+      + (t.risk||[]).map(function(r,i){
+        var realSug=r.s&&r.s.indexOf('删除或改写')<0;
+        var hs=r.hits||[],rows='';
+        if(hs.length){
+          hs.forEach(function(x){
+            rows+='<div class="risk-row"><span class="risk-min">第 '+x.m+' 分钟</span><span class="risk-tx">…'+esc(x.t)+'…</span></div>';
+          });
+        } else {
+          rows='<div class="hint">该词无时间节点明细（分篇稿可能缺时间戳）</div>';
+        }
+        return '<div id="riskD'+i+'" class="risk-det" style="display:none">'
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:baseline;margin-bottom:3px">'
+          +'<span class="pill '+(r.lv==='high'?'fail':'warn')+'">'+esc(r.w)+' ×'+r.n+'</span>'
+          +'<span class="risk-cat">'+esc(r.c||'')+'</span></div>'
+          +rows
+          +(realSug?'<div class="risk-sug">改写建议：'+esc(r.s)+'</div>':'')
+          +'</div>';
+      }).join('');
   }
 
   modal('<h3>'+esc(t.acc)+' · '+t.date+'</h3>'
@@ -4848,8 +4818,8 @@ function viewContent(){
   h+='<div class="kpis">'
    + kpi('复盘完成',doneCnt+' 场',all.length?('完成率 '+pct(doneCnt/all.length*100,0)):'—')
    + kpi('有稿场次',scriptCnt+' 场',all.length?('覆盖 '+pct(scriptCnt/all.length*100,0)):'—')
-   + kpi('无违禁词场次',cleanCnt+' 场',scriptCnt?pct(cleanCnt/scriptCnt*100,0)+' 无违规词':'暂无')
-   + kpi('风险词命中',riskCnt+' 篇','违规词扫描粗筛，只做提醒')
+   + kpi('无违规词',cleanCnt+' 场',scriptCnt?pct(cleanCnt/scriptCnt*100,0):'暂无')
+   + kpi('风险词命中',riskCnt+' 篇','粗筛提醒')
    +'</div>';
 
   /* ---- 筛选 ---- */
@@ -4952,8 +4922,8 @@ function viewReview(){
   h+='<div class="kpis">'
    + kpi('复盘完成',_dc+' 场',all.length?('完成率 '+pct(_dc/all.length*100,0)):'—')
    + kpi('有稿场次',_sc+' 场',all.length?('覆盖 '+pct(_sc/all.length*100,0)):'—')
-   + kpi('无违禁词场次',_cc+' 场',_sc?pct(_cc/_sc*100,0)+' 无违规词':'暂无')
-   + kpi('风险词命中',_rc+' 篇','违规词扫描粗筛，只做提醒')
+   + kpi('无违规词',_cc+' 场',_sc?pct(_cc/_sc*100,0):'暂无')
+   + kpi('风险词命中',_rc+' 篇','粗筛提醒')
    +'</div>';
 
 
@@ -5550,22 +5520,32 @@ function aggScriptHTML(s, trI){
   h+='<div style="font-weight:700;font-size:14px;color:var(--tx);margin:16px 0 6px">二、话术合规扫描</div>';
   if(t.riskN>0){
     var _h=0,_m=0;(t.risk||[]).forEach(function(x){if(x.lv==='high')_h+=x.n;else _m+=x.n;});
-    h+='<div class="hint">全段合并口径，检出 '+t.riskN+' 种词（🔴高 '+_h+' 处 / 🟡中 '+_m+' 处，关键词粗筛，人工复核为准）</div>';
-    /* 2026-09-09 师兄拍板：合并原「四、改写速查」——每词直接给逐字稿原文上下句，
-       改写建议只有词库给了真实改写才显示（通用占位「删除或改写」不占版面） */
-    (t.risk||[]).forEach(function(r){
+    h+='<div class="hint">全段合并口径，检出 '+t.riskN+' 种词（🔴高 '+_h+' 处 / 🟡中 '+_m+' 处，关键词粗筛，人工复核为准）· 点胶囊看每条的时间节点与原话</div>';
+    /* 2026-09-10 师兄拍板：风险词改胶囊——胶囊行只显「词 ×次数」，
+       点胶囊展开该词每次命中的「第 N 分钟 + 原话」（手风琴，折叠逻辑同下方互动节拍）；
+       改写建议只有词库给了真实改写才显示（通用占位「删除或改写」不占版面）。 */
+    h+='<div class="risk-chips">';
+    (t.risk||[]).forEach(function(r,i){
+      h+='<span class="risk-chip '+(r.lv==='high'?'fail':'warn')+'" onclick="tgRisk('+i+')">'+esc(r.w)+' ×'+r.n+'</span>';
+    });
+    h+='</div>';
+    (t.risk||[]).forEach(function(r,i){
       var realSug=r.s&&r.s.indexOf('删除或改写')<0;
-      h+='<div class="tr-riskbox" style="margin-top:8px">'
-        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+      var hs=r.hits||[],rows='';
+      if(hs.length){
+        hs.forEach(function(x){
+          rows+='<div class="risk-row"><span class="risk-min">第 '+x.m+' 分钟</span><span class="risk-tx">…'+esc(x.t)+'…</span></div>';
+        });
+      } else {
+        rows='<div class="hint">该词无时间节点明细（分篇稿可能缺时间戳），全文见逐字稿</div>';
+      }
+      h+='<div id="riskD'+i+'" class="risk-det" style="display:none">'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:baseline;margin-bottom:3px">'
         +'<span class="pill '+(r.lv==='high'?'fail':'warn')+'">'+esc(r.w)+' ×'+r.n+'</span>'
-        +'<span style="font-size:11px;color:#8A5A08">'+esc(r.c||'')+'</span>'
-        +(realSug?'<span style="font-size:12px;color:#0F6E56;margin-left:auto">改写：'+esc(r.s)+'</span>':'')
+        +'<span class="risk-cat">'+esc(r.c||'')+'</span></div>'
+        +rows
+        +(realSug?'<div class="risk-sug">改写建议：'+esc(r.s)+'</div>':'')
         +'</div>';
-      (r.snips||[]).slice(0,2).forEach(function(sn){
-        h+='<div style="font-size:12px;color:var(--tx2);margin-top:5px;line-height:1.55">…'+esc(sn)+'…</div>';
-      });
-      if(!(r.snips||[]).length&&!realSug)h+='<div class="hint" style="margin-top:4px">（无原文片段，全文见逐字稿）</div>';
-      h+='</div>';
     });
   } else {
     h+='<div class="hint">未检出违规词（关键词粗筛，人工复核为准）。</div>';
@@ -5614,7 +5594,6 @@ function aggScriptHTML(s, trI){
       bks.forEach(function(k){h+='<div id="beatD'+k+'" style="display:none;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px"></div>';});
       h+='</div>';
     }
-    h+='<div class="hint" style="margin-top:4px">「引导→响应」对照（引导后在线/涨粉是否抬头）需分钟级曲线，数据桥下轮接入。</div>';
   }
 
   h+='<div class="frow" style="margin-top:16px">'
