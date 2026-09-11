@@ -691,6 +691,25 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
 
 
 
+/* ============ 报告「独立分享页」（2026-09-11 师兄：单条复盘报告要能直接转微信看）
+   链接形如 …/live-console.html?r=<压缩后的报告全文>。接收方点开就是一张干净的只读报告页：
+   无 header、无 tab、无底栏，不需要 Cloud 同步 Key、也不依赖快照发布没发布过，
+   看到的就是发送那一刻的原文（含手写亮点/问题/建议）。
+   ⚠️ 只读：分享模式不渲染工作台、不轮询、不云同步、不 save，绝不碰接收方的本地数据。 */
+body.share-mode{background:var(--bg)}
+body.share-mode header,body.share-mode .bnav,body.share-mode #backupTip{display:none}
+.sharepg{max-width:768px;margin:0 auto;padding:16px 14px calc(30px + env(safe-area-inset-bottom))}
+.sharepg-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sharepg-hd .lg{width:34px;height:34px;border-radius:10px;background:var(--pri-soft);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.sharepg-hd .lg svg{width:18px;height:18px;stroke:var(--pri);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sharepg-hd .t1{font-size:16.5px;font-weight:700;color:var(--tx);line-height:1.3}
+.sharepg-hd .t2{font-size:12.5px;color:var(--tx3);margin-top:3px;line-height:1.45;word-break:break-word}
+.sharepg .report{font-size:14.5px;line-height:1.92;background:var(--card);max-height:none;overflow:visible;padding:16px}
+.sharepg-ft{margin-top:14px;font-size:12px;color:var(--tx3);text-align:center;line-height:1.85}
+.sharepg-ft a{color:var(--pri);text-decoration:none}
+.share-url{width:100%;height:96px;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--tx2);background:#F7F8FC;word-break:break-all;resize:none;margin-top:6px}
+@media (max-width:768px){.sharepg{padding:12px 10px calc(26px + env(safe-area-inset-bottom))}.sharepg .report{padding:12px;font-size:14px}}
+
 .report{background:#F7F8FC;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:13.5px;line-height:1.85;word-break:break-word;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;max-height:420px;overflow:auto}
 /* 2026-09-09 复盘报告排版优化（师兄指出字体不好）：等宽字体换中文正文栈；
    显示层按行结构化（fmtReport）：章节标题加粗、列表项圆点缩进、空行收紧。
@@ -826,7 +845,10 @@ nav.tabs button.on{color:var(--pri);border-bottom-color:var(--pri)}
     <nav class="tabs" id="topTabs" data-page-node-id="d4prTV5tupUFmmkqvdUjA9"></nav>
 
     <div id="freshBar" class="freshbar" data-page-node-id="QZRUso9FjvrEqEObqf7O7D"></div>
-    <div id="mgmtBar" class="mgmtbar"></div>
+    <!-- 2026-09-11 师兄拍板：原来的「管理条」#mgmtBar 从这里（全局 header，每个页面都显示）
+         挪进「今日概览」，顶替那条「实时状态已同步 · 来自实时监控屏」绿条（图1→图2）。
+         想恢复全局常驻：把下面这行 div 的注释去掉，并在 render() 里加回 renderMgmtBar();
+    <div id="mgmtBar" class="mgmtbar"></div> -->
 
   </div>
 
@@ -935,6 +957,10 @@ var DB={v:2,accounts:[],sessions:[],cfg:{seeded:false,tipDismiss:0}};
 function save(){DB.localTs=Date.now();try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('保存失败：本地空间可能已满');}syncPush();}
 
 function load(){
+
+  /* 2026-09-11 分享模式：不读也不写访客的 localStorage —— 内存库直接置空（渲染一张报告用不到库），
+     顺带绕开下面两处 seed()/save()，访客的浏览器一个字节都不会被我们碰。 */
+  if(typeof SHARE!=='undefined'&&SHARE.on){DB={v:2,accounts:[],sessions:[],accountsArch:[],sessionsArch:[],cfg:{seeded:true,tipDismiss:0},skips:{},cloud:{apiKey:'',binId:'',autoSync:true},accAdd:[],accDel:[]};return;}
 
   try{var r=localStorage.getItem(KEY); if(r){DB=JSON.parse(r);}}catch(e){}
 
@@ -1612,13 +1638,14 @@ function rtHm(ts) {
   return s.slice(-5);
 }
 
-/* --- 管理条：顶部常驻 --- */
-function renderMgmtBar() {
-  var host = document.getElementById('mgmtBar');
-  if (!host) return;
+/* --- 管理条：2026-09-11 起只渲染在「今日概览」顶部（由 statCardsRow() 调用）---
+   分层：mgmtBarChips() 只拼内层 pill 字符串（不碰 DOM）；mgmtBarHtml() 外面套壳。
+   ⚠️ 壳不能省：.mgmtbar 上挂着 display:flex / gap / 横向滚动，
+   .mgmtbar .mg-h 与 .mgmtbar .mg-live 也挂在这个类上 —— 只给内层 pill 会挤成一团。
+   单向调用：statCardsRow → mgmtBarHtml → mgmtBarChips（叶子），不反向回调任何渲染函数。 */
+function mgmtBarChips() {
   var k = DB.rtKpi, g = DB.guard, p = DB.procheck, ar = DB.autoRuns;
-  if (!k && !g && !p && !ar) { host.className = 'mgmtbar hide'; host.innerHTML = ''; return; }
-  host.className = 'mgmtbar';
+  if (!k && !g && !p && !ar) return '';
 
   var chip = function (icon, key, val, cls) {
     return '<span class="mg-item ' + (cls || '') + '">' + svg(icon)
@@ -1640,6 +1667,23 @@ function renderMgmtBar() {
   if (ar) h += chip('bolt', '自动化', (((ar.counts || {}).ok) || 0) + '/' + (ar.total || 0), rtPillCls(rtAutoLevel(ar)));
   if (p) h += chip('refresh', '自检', (p.alive || 0) + '/' + (p.active || 0), rtPillCls(rtPcLevel(p)));
 
+  return h;
+}
+
+/* 带壳版：给「今日概览」用，返回 <div class="mgmtbar">…</div> 整块；无数据返回空串。 */
+function mgmtBarHtml() {
+  var c = mgmtBarChips();
+  return c ? ('<div class="mgmtbar">' + c + '</div>') : '';
+}
+
+/* 旧的全局常驻入口：保留以便随时恢复（HTML 里解除 #mgmtBar 注释 + render() 里加回调用）。
+   现在 render() 不再调它，getElementById('mgmtBar') 恒为 null，空转无害。 */
+function renderMgmtBar() {
+  var host = document.getElementById('mgmtBar');
+  if (!host) return;
+  var h = mgmtBarChips();
+  if (!h) { host.className = 'mgmtbar hide'; host.innerHTML = ''; return; }
+  host.className = 'mgmtbar';
   host.innerHTML = h;
 }
 
@@ -2018,13 +2062,19 @@ function statCardsRow(t,todayS,planned){
       freshD=shortDate(stInfo.exportedAt)+' 导出';
     }
   }
-  /* B 兜底提示：rt 在不在，决定上面这几张卡「可不可信」——必须一眼看见。
-     以前缺这句，于是播完的显示「直播中」、已停用的报「断播」，没人知道那是猜的。 */
+  /* ★ 2026-09-11 师兄拍板（图1→图2）：原来钉在全局 header 的「管理条」——
+     实时 / 在播 / 守护 / CDP / 录制 / 待复盘 / 账号 / 守护率 / 自动化 / 自检 十颗 pill——
+     挪到这儿，顶替原来这条「实时状态已同步 · 来自实时监控屏」绿条，只在「今日概览」显示。
+     不丢信息：管理条第一颗 pill 就是「● 实时 12:22」，与绿条同源（rtKpi.gen_at）。
+     绿条降级为兜底：管理条拿不到任何数据时才显示，保证「这是推断值」的警示不丢。 */
   var gAt=String((DB.rtKpi&&DB.rtKpi.gen_at)||'');
   var gTm=gAt.indexOf(' ')>=0?gAt.split(' ')[1].slice(0,5):gAt.slice(-5);
-  var tip=DB.rtKpi&&DB.rtKpi.gen_at
-    ? '<div class="rt-tip ok"><i></i>实时状态已同步 '+esc(gTm)+' · 来自实时监控屏</div>'
-    : '<div class="rt-tip warn"><i></i>实时状态未同步 · 以下为推断值，准确状态看实时监控屏</div>';
+  var tip=mgmtBarHtml();
+  if(!tip){
+    tip=DB.rtKpi&&DB.rtKpi.gen_at
+      ? '<div class="rt-tip ok"><i></i>实时状态已同步 '+esc(gTm)+' · 来自实时监控屏</div>'
+      : '<div class="rt-tip warn"><i></i>实时状态未同步 · 以下为推断值，准确状态看实时监控屏</div>';
+  }
   return tip+'<div class="stat-cards">'+card1+card3+'<div class="stat-card '+freshColor+'"><div class="sc-l">数据新鲜</div><div class="sc-v">'+freshV+'</div><div class="sc-d">'+esc(freshD)+'</div><div class="sc-bar"></div></div></div>';
 }
 
@@ -5447,7 +5497,9 @@ function showReport(id){
 
    +'<div class="report" id="rptBox">'+fmtReport(txt)+'</div>'
 
-   +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
+   +'<div class="frow"><button class="btn lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
+
+   +'<button class="btn pri lg" onclick="copyReportLink()">'+svg('link')+'复制分享链接</button>'
 
    +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
 
@@ -5498,7 +5550,9 @@ function aggReviewHTML(s){
   var txt=buildReport(s); window._rpt=txt; window._rptName='复盘_'+accName(s.acc)+'_'+s.date+'.md';
   return '<div class="report" id="rptBox">'+fmtReport(txt)+'</div>'
     +'<div class="frow"><button class="btn ghost" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
-    +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
+    +'<button class="btn pri lg" onclick="copyReportLink()">'+svg('link')+'复制分享链接</button>'
+
+   +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
     +'<button class="btn ghost" onclick="openReview(\''+s.id+'\')">'+svg('edit')+'修改</button></div>';
 }
 
@@ -5695,7 +5749,9 @@ function openWeekly(accId){
   var fname=accId?('直播周报_'+accName(accId)+'_'+t+'.md'):('直播周报_'+t+'.md');window._rptName=fname;
   modal('<h3>'+title+'</h3><div class="sub">'+(accId?accName(accId):'全账号')+' 近 7 天自动汇总，复制即可发群</div>'
    +'<div class="report">'+fmtReport(txt)+'</div>'
-   +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
+   +'<div class="frow"><button class="btn lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
+   +'<button class="btn pri lg" onclick="copyReportLink()">'+svg('link')+'复制分享链接</button>'
+
    +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
    +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
 }
@@ -5748,7 +5804,9 @@ function openMonthly(accId){
   var fname=accId?('直播月报_'+accName(accId)+'_'+t+'.md'):('直播月报_'+t+'.md');window._rptName=fname;
   modal('<h3>'+(accId?'单账号月报 · '+accName(accId):'本月汇总 · 成果共享')+'</h3><div class="sub">'+(accId?accName(accId):'全账号')+' 近 30 天自动汇总，复制即可发群</div>'
    +'<div class="report">'+fmtReport(txt)+'</div>'
-   +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
+   +'<div class="frow"><button class="btn lg" onclick="copyTxt(window._rpt)">'+svg('copy')+'复制全文</button>'
+   +'<button class="btn pri lg" onclick="copyReportLink()">'+svg('link')+'复制分享链接</button>'
+
    +'<button class="btn lg" onclick="shareOpen()">'+svg('share')+'分享</button>'
    +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
 }
@@ -6513,11 +6571,146 @@ function syncNow(){
 
 
 
+/* ============ 报告「独立分享链接」（2026-09-11 师兄：单条复盘报告要能直接转微信看）
+   思路：报告正文本来就是前端现算的纯文本（buildReport），所以最省事的做法是把「正文本身」带在
+   链接里 —— ?r=<deflate-raw + base64url 的报告全文>。接收方点开即见，不需要 Cloud 同步 Key、
+   不依赖 workbench_data.json 新不新、也不会随后续数据变化，看到的就是发送那一刻的原文。
+
+   ★ 为什么必须把正文塞进链接（而不是链接只带场次 id、让接收方自己算）：
+     ① 线上快照滞后 —— workbench_data.json 是 deploy 时刻的静态文件，接收方没 Key 只能读它；
+     ② 手写正文根本推不上去 —— 快照里每场只有 reviewDone 布尔，亮点/问题/建议三栏只存在
+        发送方的 localStorage 与带 Key 的云端 bin，公共通道推不了。所以只有正文自带才完整。
+
+   编码：'1'+b64url = deflate-raw 压缩；'0'+b64url = 未压缩兜底。
+   浏览器没有 CompressionStream（iOS < 16.4 等）时自动降级为 0，链接长一点但仍能用；
+   反过来若收到 '1' 而浏览器不支持解压，页面给一句人话提示，不白屏。
+   实测一条报告（600~1200 字）压缩后 URL 约 820~1030 字符，微信正常打开。
+
+   ⚠️ 只读视图：分享模式不渲染工作台、不轮询、不云同步、不 save，连 header/tab/底栏都隐藏，
+      绝不会碰到接收方的本地数据。 */
+var SHARE={on:false,ready:false,txt:''};
+
+function shareParamFromURL(){
+  try{var q=new URLSearchParams(location.search);var r=q.get('r');return r?String(r):'';}catch(e){return '';}
+}
+
+function _b64u(bytes){
+  var s='',i;for(i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+function _unb64u(str){
+  var s=String(str).replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4)s+='=';
+  var bin=atob(s),out=new Uint8Array(bin.length),i;
+  for(i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+  return out;
+}
+
+function _canZip(){
+  return typeof CompressionStream==='function'&&typeof DecompressionStream==='function'
+    &&typeof Blob==='function'&&!!Blob.prototype.stream&&typeof Response==='function';
+}
+
+/* 报告文本 -> 可塞进 URL 的短串（Promise，绝不 reject） */
+function reportPack(txt){
+  var u8=new TextEncoder().encode(String(txt||''));
+  var plain='0'+_b64u(u8);
+  if(!_canZip())return Promise.resolve(plain);
+  try{
+    var st=new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Response(st).arrayBuffer()
+      .then(function(ab){return '1'+_b64u(new Uint8Array(ab));})
+      .catch(function(){return plain;});
+  }catch(e){return Promise.resolve(plain);}
+}
+
+/* 短串 -> 报告文本（Promise） */
+function reportUnpack(pack){
+  return new Promise(function(ok,no){
+    try{
+      var p=String(pack||''),tag=p.charAt(0),u8=_unb64u(p.slice(1));
+      if(tag==='0'){ok(new TextDecoder().decode(u8));return;}
+      if(tag!=='1'||!_canZip()){no(new Error('unsupported'));return;}
+      var st=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      new Response(st).arrayBuffer().then(
+        function(ab){ok(new TextDecoder().decode(new Uint8Array(ab)));},
+        function(){no(new Error('corrupt'));});
+    }catch(e){no(new Error('decode'));}
+  });
+}
+
+function reportShareURL(pack){return location.origin+location.pathname+'?r='+pack;}
+
+/* 报告弹窗里的「复制分享链接」（报告 / 单场 / 周报 / 月报 四个弹窗都挂了这个按钮） */
+function copyReportLink(){
+  var t=window._rpt||'';
+  if(!t){toast('报告还没生成');return;}
+  _sharePrev=document.getElementById('modalHost').innerHTML;   /* 复用分享面板的还原机制，退出时回到原报告 */
+  toast('正在生成分享链接…');
+  reportPack(t).then(function(pack){
+    var url=reportShareURL(pack);
+    window._shareURL=url;
+    copyTxt(url);
+    var warn=pack.length>3500
+      ?'<div class="hint" style="color:#D97706">⚠️ 这条链接偏长（'+pack.length+' 字符），个别聊天工具可能折行。真发不出去就用「分享 → 微信版纯文本」直接发文字。</div>'
+      :'';
+    modal('<h3>报告独立分享链接</h3>'
+      +'<div class="sub">已复制 · 链接 '+pack.length+' 字符 · 粘到微信直接发</div>'
+      +'<textarea class="share-url" readonly onclick="this.select()">'+esc(url)+'</textarea>'
+      +warn
+      +'<div class="hint" style="margin-top:10px">对方点开就是这张报告，不用装东西、不用配 Key；<br>链接自带内容快照，之后再改数据也不会变。</div>'
+      +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(window._shareURL)">'+svg('copy')+'再复制一次</button>'
+      +'<button class="btn lg" onclick="closeShare()">'+svg('doc')+'返回报告</button>'
+      +'<button class="btn ghost lg" onclick="closeModal()">关闭</button></div>');
+  });
+}
+
+/* 分享页：进入只读模式并解包渲染 */
+function startSharePage(pack){
+  SHARE.on=true;SHARE.ready=false;SHARE.txt='';
+  document.body.classList.add('share-mode');
+  document.title='直播复盘报告';
+  document.getElementById('view').innerHTML=
+    '<div class="sharepg"><div class="hint" style="padding:28px 0;text-align:center">正在打开报告…</div></div>';
+  reportUnpack(pack).then(function(txt){
+    SHARE.txt=txt||'';SHARE.ready=true;renderShare();
+  },function(){
+    document.getElementById('view').innerHTML='<div class="sharepg"><div class="card">'
+      +'<div class="card-h"><div class="ic" style="background:#EEF0FF;color:#4F46E5">'+svg('alert')+'</div><h3>这个链接打不开</h3></div>'
+      +'<div class="hint">多半是链接被聊天工具截断了（转发时折行或加了省略号），或者浏览器太老不支持解压。<br>让发给你的人重新复制一次完整链接，或改成「分享 → 微信版纯文本」直接发文字。</div>'
+      +'<div class="frow"><button class="btn pri lg" onclick="location.reload()">'+svg('refresh')+'重新加载</button></div>'
+      +'</div></div>';
+  });
+}
+
+/* 分享页正文渲染（只读，永不写 #view 之外的东西） */
+function renderShare(){
+  if(!SHARE.ready)return;
+  var t=SHARE.txt||'',ls=t.split('\n'),sub='',i;
+  for(i=0;i<ls.length;i++){if(ls[i].trim()){sub=ls[i].replace(/^【直播复盘】/,'');break;}}
+  var home=esc(location.origin+location.pathname);
+  document.getElementById('view').innerHTML='<div class="sharepg">'
+    +'<div class="sharepg-hd"><span class="lg">'+svg('doc')+'</span>'
+    +'<div><div class="t1">直播复盘报告</div><div class="t2">'+esc(sub)+'</div></div></div>'
+    +'<div class="report">'+fmtReport(t)+'</div>'
+    +'<div class="frow"><button class="btn pri lg" onclick="copyTxt(SHARE.txt)">'+svg('copy')+'复制全文</button>'
+    +'<button class="btn lg" onclick="copyTxt(location.href)">'+svg('link')+'复制本页链接</button></div>'
+    +'<div class="sharepg-ft">由「直播运营管理台」生成 · 本页是发送那一刻的报告快照<br>'
+    +'<a href="'+home+'">打开工作台</a></div>'
+    +'</div>';
+}
+
 /* ============ 渲染 ============ */
 
 function render(){
 
-  renderTabs();renderTip();renderFreshness();renderMgmtBar();
+  if(SHARE.on){renderShare();return;}   /* 2026-09-11：分享模式只渲染报告页，不动工作台 */
+
+  /* 2026-09-11 师兄拍板：管理条不再全局渲染，已挪进「今日概览」（statCardsRow 里的 mgmtBarHtml()），
+     只在那个页面显示，其他页面不再显示。想恢复全局常驻：本行末尾加回 renderMgmtBar();
+     并解除 HTML 里 #mgmtBar 那行的注释。 */
+  renderTabs();renderTip();renderFreshness();
 
   var v=document.getElementById('view');
 
@@ -6856,6 +7049,7 @@ function applySnapshot(snap){
 }
 
 function loadSnapshot(cb){
+  if(SHARE.on){cb&&cb(false);return;}   /* 2026-09-11 分享模式：不拉快照 */
   fetch('workbench_data.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(snap){
     if(snap&&snap.version===3&&snap.accounts&&snap.sessions&&(!DB.cfg.dataSnapTs||DB.cfg.dataSnapTs<snap.exportedAt)){
       applySnapshot(snap);
@@ -6884,11 +7078,20 @@ function applyCloudFromURL(){
   }catch(e){return false;}
 }
 
+/* 2026-09-11：单条报告独立分享页。带 ?r= 进来 = 只看这一张报告。
+   ① SHARE.on 必须在 load() 之前置位 —— 否则 load() 里的种子逻辑会给访客写一份示例数据；
+   ② 跳过快照与云同步：省流量，也免 Key。 */
+var _sharePack=shareParamFromURL();
+if(_sharePack)SHARE.on=true;
+
 load();
 
 var _cloudFromURL=applyCloudFromURL();
 
+if(_sharePack)startSharePage(_sharePack);
+
 loadSnapshot(function(){
+  if(SHARE.on)return;   /* 分享模式不渲染工作台 */
   if(DB.cloud&&DB.cloud.apiKey&&DB.cloud.binId){
     syncPull(function(){syncReady=true;render();updateSyncBtn();
       if(_cloudFromURL)toast('云同步已配置成功 · 正在拉取云端数据');});
@@ -6907,6 +7110,7 @@ loadSnapshot(function(){
 /* 页面可见时每 60 秒静默拉取一次云端最新 */
 
 setInterval(function(){
+  if(SHARE.on)return;   /* 分享模式不轮询 */
   if(document.visibilityState==='visible'&&syncReady){
     if(document.getElementById('modalHost').innerHTML.trim())return;
     loadSnapshot(function(updated){
@@ -6937,6 +7141,7 @@ setInterval(function(){
   }
   var _rtDone=false;
   function tick(){
+    if(SHARE.on)return;   /* 分享模式不拉实时台 */
     if(document.visibilityState!=='visible')return;   /* 后台不拉 */
     var src=(DB.rtBin&&DB.rtBin.binId)
       ? 'https://api.jsonbin.io/v3/b/'+DB.rtBin.binId+'/latest'   /* 公共 bin，免 Key */
