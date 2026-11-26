@@ -1106,7 +1106,13 @@ var SEED_ACC_RAW=[
 
  {acc:"希希中式驻颜",operator:"点淘",sheet:"希希中式驻颜",liveTime:"20:30",guard:"20:20",auto:"automation-1785161172208",login:"ok",loginDays:0},
 
- {acc:"古法锻炼@杨杨",operator:"点淘",sheet:"古法锻炼@杨杨",liveTime:"20:30",guard:"20:20",auto:"automation-1785161172208",login:"ok",loginDays:0}
+ {acc:"古法锻炼@杨杨",operator:"点淘",sheet:"古法锻炼@杨杨",liveTime:"20:30",guard:"20:20",auto:"automation-1785161172208",login:"ok",loginDays:0},
+
+ {acc:"丹丹古法面部美容",operator:"点淘",sheet:"丹丹古法面部美容",liveTime:"05:00",guard:"04:50",auto:"17244972-f107-4a8a-8f33-b35bcf1ba859",login:"ok",loginDays:0},
+
+ {acc:"珈珈古法驻颜666",operator:"点淘",sheet:"珈珈古法驻颜666",liveTime:"13:30",guard:"13:20",auto:"d38e544a-d0c9-4655-b620-b83dee3f8b64",login:"ok",loginDays:0},
+
+ {acc:"泊涵古法驻颜(备用)",operator:"点淘",sheet:"泊涵古法驻颜(备用)",liveTime:"06:50",guard:"06:40",auto:"bf3e4f7e-52ab-40e0-8b6b-23ccda74edd2",login:"ok",loginDays:0},
 
 ];
 
@@ -2342,6 +2348,8 @@ function markAuth(id){var a=accById(id);if(!a)return;a.auth='ok';a.lastGuard=tod
 var TABS=[{k:'todo',n:'今日概览',i:'clock'},{k:'dash',n:'直播看板',i:'grid'},{k:'data',n:'场次数据',i:'list'},{k:'content',n:'复盘报告',i:'file'},{k:'guard',n:'账号守护',i:'shield'}];
 
 var cur='todo';
+var revScope='own';   /* 复盘报告页：own=自营 / bench=对标复盘（2026-11-22） */
+var bmAccFilter='';   /* 对标复盘账号筛选（全名，'' = 全部） */
 
 /* 复盘报告筛选状态 */
 
@@ -4958,7 +4966,244 @@ function viewContent(){
   return h+'</div>';
 }
 
+/* ===== 对标复盘视图（2026-11-22）=====
+   数据来自 workbench_data.json 的 benchmark 节点（对标复盘 DWS 精简快照）。
+   与自营复盘完全隔离：不进 sessions、不进 transcripts、不写回任何对标文件。
+   口径：话术标签/违规命中仅作参考提示，不作范本、不下合规结论；每日约 09:35 生成，非实时。 */
+function viewBenchmark(){
+  var bm=DB.benchmark;
+  if(!bm||!bm.sessions||!bm.sessions.length){
+    return '<div class="card"><div class="card-h"><div class="ic">'+svg('file')+'</div><h2>对标复盘</h2></div>'
+      +'<div class="empty">'+svg('inbox')+'暂无对标复盘数据。对标复盘每天约 09:35 由「对标情报层」生成，下一轮数据桥后可见。</div></div>';
+  }
+  var h='<div class="card"><div class="card-h"><div class="ic">'+svg('file')+'</div><h2>对标复盘</h2>'
+    +'<span class="pill grey">每日快照 · 非实时</span></div>'
+    +'<div class="hint" style="margin-bottom:12px;color:#9A6700;background:#FFF8E6;border-left:3px solid #E0A800;padding:8px 10px;border-radius:6px">'
+    +'<b>数据时钟</b>：对标快照 asOf <b>'+esc(bm.asOf)+'</b>（生成 '+esc(bm.generatedAt||'—')+'），每天约 09:35 生成，'
+    +'与自营实时数据不同步。话术标签与违规命中<b>仅供参考、不作范本、不下合规结论</b>；最终判断以 IMA 权威手册与人工复核为准。</div>';
+
+  var ss=bm.sessions||[];
+  /* KPI */
+  h+='<div class="kpis">'
+    + kpi('对标账号', (bm.accounts||[]).length+' 个', '仅 benchmark 号')
+    + kpi('累计场次', ss.length+' 场', '近 30 天情报快照')
+    + kpi('数据日期', bm.asOf||'—', '非实时')
+    +'</div>';
+
+  /* 汇总入口（只给文件名，正文在电脑端 D:\\直播运营\\复盘报告\\对标\\ 目录）*/
+  h+='<div class="hint" style="margin:10px 0;font-size:13px">'
+    +'近7天汇总：<b>'+esc(bm.summary||'—')+'</b>'
+    +(bm.summary?' <span style="color:var(--tx3)">（全文在电脑端 复盘报告\\对标\\ 目录）</span>':'')+'</div>';
+
+  /* 账号筛选 */
+  var _accs=bm.accounts||[];
+  var opt='<option value="">全部账号</option>';
+  _accs.forEach(function(a){opt+='<option value="'+esc(a)+'"'+(bmAccFilter===a?' selected':'')+'>'+esc(a)+'</option>';});
+  h+='<div class="frow" style="gap:8px;margin:0 0 10px">'
+    +'<span class="sub" style="margin:0">账号：</span>'
+    +'<select onchange="bmAccFilter=this.value;render()" style="font-size:12px;padding:5px 8px;border:1px solid #E2E5F0;border-radius:8px;background:#fff;color:#1B1D29;max-width:220px">'+opt+'</select>'
+    +'</div>';
+  var _filter=bmAccFilter;
+  var _list=_filter?ss.filter(function(s){return s.acc===_filter;}):ss;
+
+  if(!_list.length){h+='<div class="empty">'+svg('inbox')+'该账号暂无对标场次。</div></div>';return h;}
+
+  h+='<div class="hint" style="margin:2px 0 8px;font-size:12px;color:var(--tx3)">点账号名可看逐场话术复盘（概况 / 标签 / 互动节拍，原话可展开）。</div>';
+  /* 场次表 */
+  h+='<div style="overflow-x:auto"><table class="tbl" style="width:100%;font-size:12px">'
+    +'<thead><tr><th>账号</th><th>日期</th><th>开播</th><th>时长</th><th>段数</th><th>字数</th><th>违规</th><th>互动</th><th>软广</th><th>标签 TOP3</th></tr></thead><tbody>';
+  _list.slice(0,120).forEach(function(s){
+    var _tg=s.tags||{};
+    var _top=Object.keys(_tg).map(function(k){return [k,+_tg[k]||0];}).filter(function(x){return x[1]>0;})
+      .sort(function(a,c){return c[1]-a[1];}).slice(0,3).map(function(x){return x[0]+' '+x[1];}).join(' · ')||'—';
+    var _bi=_list.indexOf(s);
+    h+='<tr>'
+      +'<td style="white-space:nowrap"><a href="javascript:void(0)" onclick="openBenchTr('+_bi+')" title="点开看逐场话术复盘" style="color:var(--blue-tx,#2D6CDF);font-weight:600;text-decoration:underline;cursor:pointer">'+esc(s.acc)+'</a></td>'
+      +'<td>'+esc(s.date)+'</td><td>'+esc(s.start||'—')+'</td><td>'+esc(s.span||'—')+'</td>'
+      +'<td>'+num(s.segs)+'</td><td>'+num(s.chars)+'</td>'
+      +'<td'+(s.viol>0?' style="color:#C0392B;font-weight:600"':'')+'>'+num(s.viol)+'</td>'
+      +'<td>'+num(s.inter)+'</td><td>'+num(s.softad)+'</td>'
+      +'<td style="color:var(--tx3)">'+esc(_top)+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(_list.length>120)h+='<div class="hint" style="margin-top:6px">仅显示最近 120 场，共 '+_list.length+' 场。</div>';
+
+  /* 报告文件名（不内联正文）*/
+  var _rep=(bm.reports||{})[_filter]||null;
+  if(_rep&&_rep.length){
+    h+='<div class="hint" style="margin-top:12px;font-size:12px"><b>该账号复盘报告</b>（全文在电脑端）：</div><ul style="font-size:12px;color:var(--tx3);margin:4px 0 0 18px">';
+    _rep.forEach(function(r){h+='<li>'+esc(r.f)+' <span style="color:#B0B4C4">'+esc(r.m)+'</span></li>';});
+    h+='</ul>';
+  }
+  h+='</div>';
+  return h;
+}
+/* ===== 对标逐场话术复盘弹窗（2026-11-22）：与自营 openSessionAggregate 同版式 ===== */
+
+/* 手风琴：标签/违规明细容器点开（复用 collapseDetails 收起各明细组，这里用 benchD 前缀）*/
+function tgBenchChip(i){
+  var el=document.getElementById('benchD'+i);if(!el)return;
+  var wasOpen=(el.style.display==='block');
+  collapseDetails();
+  if(wasOpen)return;
+  el.style.display='block';
+}
+
+/* 数据 tab：对标场次的经营/内容概览（对标无 GMV，只有内容侧指标，据实呈现不造假）*/
+function benchDataHTML(s){
+  var h='<div class="grid6">'
+    +cell('字数',num(s.chars))
+    +cell('时长',esc(s.span||'—'))
+    +cell('段数',num(s.segs))
+    +'</div><div class="grid6" style="margin-top:8px">'
+    +cell('违规段',(s.viol>0?'<span style="color:var(--red-tx);font-weight:600">'+num(s.viol)+' 段</span>':'无'))
+    +cell('互动引导',num(s.inter))
+    +cell('软广段',num(s.softad))
+    +'</div>';
+  h+='<div class="hint" style="margin-top:9px">账号 <b>'+esc(s.acc)+'</b> · 日期 <b>'+esc(s.date)+'</b> · 开播 '+esc(s.start||'—')
+    +(s.completeness?' · 完整度 '+esc(s.completeness):'')+'</div>';
+  if(s.anomaly)h+='<div class="hint" style="color:var(--amber-tx)">异常：'+esc(s.anomaly)+'</div>';
+  h+='<div class="hint" style="margin-top:8px">对标侧无 GMV / 在线人数口径，此处只呈现话术内容侧指标；标签与违规命中为关键词粗筛，仅供参考、不作范本、不下合规结论。</div>';
+  return h;
+}
+
+/* 话术 tab：三章节——一、概况  二、标签胶囊（可展开原话） 三、互动节拍热力带（可点看原话）*/
+function benchScriptHTML(s,segs){
+  if(!segs||!segs.length)return '<div class="empty" style="padding:20px 0">'+svg('inbox')+'该场无展开级明细（可能无标签/违规命中段）</div>';
+  var h='';
+  /* 一、概况 */
+  h+='<div style="font-weight:700;font-size:14px;color:var(--tx);margin:2px 0 8px">一、逐字稿概况</div>';
+  h+='<div class="grid6">'+cell('字数',num(s.chars))+cell('时长',esc(s.span||'—'))+cell('展开段',segs.length+' 段')+'</div>';
+  /* 二、标签胶囊：对标 12 类标签，点开看该标签的真实原话段；违规段单列一组 */
+  h+='<div style="font-weight:700;font-size:14px;color:var(--tx);margin:16px 0 6px">二、话术标签扫描</div>';
+  var tagMap={};segs.forEach(function(x){(x.tg||[]).forEach(function(t){(tagMap[t]=tagMap[t]||[]).push(x);});});
+  var tagKeys=Object.keys(tagMap).sort(function(a,b){return tagMap[b].length-tagMap[a].length;});
+  var violSegs=segs.filter(function(x){return x.v;});
+  h+='<div class="hint">共 '+tagKeys.length+' 类标签命中 · 违规粗筛 '+violSegs.length+' 段（关键词规则命中，非人工判定）· 点胶囊看该类的原话与时间节点。</div>';
+  h+='<div class="risk-chips">';
+  tagKeys.forEach(function(t,i){h+='<span class="risk-chip warn" onclick="tgBenchChip('+i+')">'+esc(t)+' ×'+tagMap[t].length+'</span>';});
+  if(violSegs.length)h+='<span class="risk-chip fail" onclick="tgBenchChip('+tagKeys.length+')">违规粗筛 ×'+violSegs.length+'</span>';
+  h+='</div>';
+  tagKeys.forEach(function(t,i){
+    var rows=tagMap[t].slice(0,40).map(function(x){return '<div class="risk-row"><span class="risk-min">'+esc(x.ts)+'</span><span class="risk-tx">…'+esc(x.tx)+'…</span></div>';}).join('');
+    h+='<div id="benchD'+i+'" class="risk-det" style="display:none"><div class="pill warn">'+esc(t)+' · '+tagMap[t].length+' 段</div>'+rows
+      +(tagMap[t].length>40?'<div class="hint">仅列前 40 段</div>':'')+'</div>';
+  });
+  if(violSegs.length){
+    var vrows=violSegs.slice(0,40).map(function(x){return '<div class="risk-row"><span class="risk-min">'+esc(x.ts)+'</span><span class="risk-tx">…'+esc(x.tx)+'…</span></div>';}).join('');
+    h+='<div id="benchD'+tagKeys.length+'" class="risk-det" style="display:none"><div class="pill fail">违规粗筛 · '+violSegs.length+' 段（关键词命中，人工复核为准）</div>'+vrows+'</div>';
+  }
+  /* 三、互动节拍：按互动类标签的段 sec 分 15 分钟桶，复用 tgBeat（window.__beatHits） */
+  var INT_T={'互动指令':'互动指令','转粉话术':'转粉话术','欢迎新进':'欢迎新进','留人防划走':'留人防划走'};
+  var hits=[];
+  segs.forEach(function(x){(x.tg||[]).forEach(function(t){if(INT_T[t])hits.push({m:Math.floor(x.sec/60),type:t,txt:x.tx,rk:''});});});
+  h+='<div style="font-weight:700;font-size:14px;color:var(--tx);margin:16px 0 6px">三、互动引导节拍</div>';
+  if(hits.length){
+    var bk={};hits.forEach(function(x){var b=Math.floor(x.m/15)*15;bk[b]=(bk[b]||0)+1;});
+    var bmax=0;Object.keys(bk).forEach(function(k){if(+k>bmax)bmax=+k;});
+    var bks=[];for(var b=0;b<=bmax;b+=15)bks.push(b);
+    var mx=0;bks.forEach(function(k){if((bk[k]||0)>mx)mx=bk[k]||0;});
+    window.__beatHits=hits;
+    h+='<div class="hint">全场 <b>'+hits.length+'</b> 段互动引导 · 点格子看该时段原话（对标口径，与自营引导计数不完全可比）</div>';
+    h+='<div class="grid6" style="margin-top:8px">';
+    Object.keys(INT_T).forEach(function(k){var n=hits.filter(function(x){return x.type===k;}).length;h+=cell(k,num(n));});
+    h+='</div><div style="margin-top:10px"><div style="display:flex;gap:3px;align-items:flex-end">';
+    bks.forEach(function(k,idx){
+      var v=bk[k]||0,last=idx===bks.length-1;
+      var cold=!last&&v<=Math.max(1,Math.round(mx*0.25));
+      var col=cold?'#F09595':(v>=mx*0.6?'#378ADD':(v>=mx*0.25?'#85B7EB':'#B5D4F4'));
+      var tc=(cold||v>=mx*0.6)?'#fff':'#3B3F55';
+      h+='<div style="flex:1;min-width:0;text-align:center;cursor:pointer" onclick="tgBeat('+k+')">'
+        +'<div style="height:26px;background:'+col+';border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:'+tc+'">'+v+'</div>'
+        +'<div style="font-size:10px;color:var(--tx3);margin-top:2px">'+k+'′</div></div>';
+    });
+    h+='</div><div style="font-size:11px;color:var(--tx3);margin-top:4px">色深=引导密 · 红格=冷场档（≤峰值25%）· 点格子展开原话</div>';
+    bks.forEach(function(k){h+='<div id="beatD'+k+'" style="display:none;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px"></div>';});
+    h+='</div>';
+  } else {
+    h+='<div class="hint">该场无互动引导标签命中段。</div>';
+  }
+  h+='<div class="frow" style="margin-top:16px"><button class="btn ghost" onclick="aggSwitch(\'full\');benchFullLoad()">'+svg('file')+'逐字稿全文</button><button class="btn pri" style="margin-left:auto" onclick="closeModal()">关闭</button></div>';
+  return h;
+}
+
+/* ===== 对标逐字稿全文（2026-11-22）：点「逐字稿」才 fetch bench_full/<sid>.json，全场段按时间汇总 ===== */
+function benchFullLoad(){
+  var el=document.getElementById('aggFull'); if(!el)return;
+  if(el.getAttribute('data-loaded')==='1')return;
+  var s=window._benchCurS; if(!s||!s.seg){el.innerHTML='<div class="empty" style="padding:20px 0">该场无逐字稿全文文件</div>';return;}
+  el.innerHTML='<div class="hint">加载全场逐字稿…</div>';
+  fetch('bench_full/'+encodeURIComponent(s.seg)+'?t='+Date.now()).then(function(r){
+    if(!r.ok)throw new Error(r.status===404?'该场逐字稿全文尚未生成（HTTP 404）':'逐字稿获取失败（HTTP '+r.status+'）');
+    return r.json();
+  }).then(function(d){
+    var segs=(d&&d.segs)||[];
+    var txt=segs.map(function(x){return x.tx||'';}).join('');
+    window._benchFullTxt=txt;
+    var rows=segs.map(function(x){
+      return '<div class="risk-row"><span class="risk-min">'+esc(x.ts||'')+'</span><span class="risk-tx">'+esc(x.tx||'')+'</span></div>';
+    }).join('');
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin:2px 0 8px;flex-wrap:wrap">'
+       +'<div style="font-weight:700;font-size:14px;color:var(--tx)">逐字稿全文 · '+num(segs.length)+' 段 · '+num(txt.length)+' 字</div>'
+       +'<button class="btn ghost sm" style="margin-left:auto" onclick="copyTxt(window._benchFullTxt)">'+svg('copy')+'复制全文</button></div>'
+       +'<div class="hint" style="margin-bottom:8px">'+esc(s.acc)+' · '+esc(s.date)+' · 全场汇总按时间顺序；与上方胶囊/节拍展开的原话同源，仅呈现范围不同。</div>'
+       +'<div class="report" style="max-height:52vh">'+(rows||'<div class="empty" style="padding:16px 0">该场无逐字稿段</div>')+'</div>';
+    el.setAttribute('data-loaded','1');
+  }).catch(function(e){
+    el.innerHTML='<div class="empty" style="padding:20px 0">逐字稿加载失败：'+esc(e&&e.message||e)+'</div>';
+  });
+}
+
+/* 打开对标逐场报告：异步 fetch 该场段明细 → 三 tab 弹窗 */
+function openBenchTr(idx){
+  var bm=(DB.benchmark||{}),s=(bm.sessions||[])[idx];
+  if(!s)return;
+  window._benchCurS=s;
+  if(!s.seg){modal('<h3>逐场话术复盘</h3><div class="empty" style="padding:20px 0">该场无展开级明细文件</div><div class="frow"><button class="btn pri" onclick="closeModal()">关闭</button></div>');return;}
+  /* 2026-11-25：completeness=missing 的场次（录音已落盘、转写未跑）没有 bench_seg 文件。
+     原逻辑直接 fetch，服务端返回 404 的 HTML 错误页，r.json() 抛
+     "Unexpected token '<', \"<!DOCTYPE\"..."，把「数据缺失」误报成「JSON 语法错误」。
+     这里先按业务状态拦截，给出可执行的提示。 */
+  if(s.completeness==='missing'){
+    modal('<h3>对标话术复盘 · '+esc(s.acc)+' · '+esc(s.date)+'</h3>'
+      +'<div class="empty" style="padding:20px 0">该场录音已落盘，但文字稿还没生成（转写未完成），暂无逐场明细。<br>转写补齐后会自动恢复，也可先看该账号其他日期的场次。</div>'
+      +'<div class="frow"><button class="btn pri" onclick="closeModal()">关闭</button></div>');
+    return;
+  }
+  modal('<h3>对标话术复盘 · '+esc(s.acc)+' · '+esc(s.date)+'</h3><div class="sub">加载逐场明细…</div>');
+  fetch('bench_seg/'+encodeURIComponent(s.seg)+'?t='+Date.now()).then(function(r){
+    /* 2026-11-25：非 2xx 时服务端返回的是 HTML 错误页，直接 r.json() 会抛
+       "Unexpected token '<'"。先判状态码，把真实原因说清楚。 */
+    if(!r.ok)throw new Error(r.status===404?'该场明细文件尚未生成（HTTP 404）':'明细获取失败（HTTP '+r.status+'）');
+    return r.json();
+  }).then(function(d){
+    var segs=(d&&d.segs)||[];
+    modal('<button class="modal-x" onclick="closeModal()" aria-label="关闭">×</button>'
+      +'<h3>对标话术复盘 · '+esc(s.acc)+' · '+esc(s.date)+' · '+esc(s.start||'')+'</h3>'
+      +'<div class="sub">对标快照 '+esc(bm.asOf||'')+' · 标签/违规为关键词粗筛，仅供参考不作范本 · 点胶囊/格子展开原话</div>'
+      +'<div class="agg-tabs">'
+      +'<button class="btn agg-tab" data-v="data" onclick="aggSwitch(\'data\')">数据</button>'
+      +'<button class="btn agg-tab" data-v="script" onclick="aggSwitch(\'script\')">话术</button>'
+      +'<button class="btn agg-tab" data-v="full" onclick="aggSwitch(\'full\');benchFullLoad()">逐字稿</button>'
+      +'</div>'
+      +'<div id="aggData">'+benchDataHTML(s)+'</div>'
+      +'<div id="aggScript" style="display:none">'+benchScriptHTML(s,segs)+'</div>'
+      +'<div id="aggFull" style="display:none"></div>'
+      +'<div id="aggReview" style="display:none"></div>');
+    aggSwitch('script');
+  }).catch(function(e){
+    modal('<h3>对标话术复盘 · '+esc(s.acc)+'</h3><div class="empty" style="padding:20px 0">明细加载失败：'+esc(e&&e.message||e)+'</div><div class="frow"><button class="btn pri" onclick="closeModal()">关闭</button></div>');
+  });
+}
+
 function viewReview(){
+
+  /* 2026-11-22：自营 / 对标 分段。对标数据与自营隔离，单独渲染 */
+  var _scope='<div class="frow" style="gap:6px;margin:0 0 12px">'
+    +'<button class="btn sm '+(revScope==='own'?'pri':'')+'" onclick="revScope=\'own\';render()">自营复盘</button>'
+    +'<button class="btn sm '+(revScope==='bench'?'pri':'')+'" onclick="revScope=\'bench\';render()">对标复盘</button>'
+    +'</div>';
+  if(revScope==='bench')return _scope+viewBenchmark();
 
   var t=today();
 
@@ -4971,7 +5216,7 @@ function viewReview(){
   });
   var rptSel='<select onchange="rptAcc=this.value" style="font-size:12px;padding:5px 8px;border:1px solid #E2E5F0;border-radius:8px;background:#fff;color:#1B1D29;max-width:170px">'+rptOpt+'</select>';
 
-  var h='<div class="card"><div class="card-h"><div class="ic">'+svg('file')+'</div><h2>复盘报告</h2></div>'
+  var h=_scope+'<div class="card"><div class="card-h"><div class="ic">'+svg('file')+'</div><h2>复盘报告</h2></div>'
    +'<div class="hint" style="margin-bottom:12px">每场直播下播后第一时间填写：亮点/问题/建议。与「场次数据」互补：场次数据看全量指标，复盘报告看结论与行动项。</div>'
    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 2px 12px"><span class="sub" style="margin:0">生成对象：</span>'+rptSel
    +'<button class="btn sm pri" onclick="openWeekly(rptAcc)" title="近 7 天汇总">'+svg('share')+'生成周报</button>'
@@ -5535,7 +5780,7 @@ var rptAcc='';
    编辑、写复盘仍走原 openSession / openReview，不改动现有列表渲染。 */
 
 function aggSwitch(v){
-  var map={data:'aggData',review:'aggReview',script:'aggScript'};
+  var map={data:'aggData',review:'aggReview',script:'aggScript',full:'aggFull'};
   for(var k in map){var el=document.getElementById(map[k]);if(el)el.style.display=(k===v?'block':'none');}
   var bs=document.querySelectorAll('.agg-tab');
   for(var i=0;i<bs.length;i++){bs[i].classList.toggle('on',bs[i].getAttribute('data-v')===v);}
@@ -7185,6 +7430,8 @@ function applySnapshot(snap){
   DB.rtBin=snap.rtBin||null;
   /* 主播话术文字稿（录屏转写产物，按场次挂载）2026-09-03 */
   DB.transcripts=snap.transcripts||null;
+  /* 对标复盘精简节点（2026-11-22）：与自营数据隔离，只读快照 */
+  DB.benchmark=snap.benchmark||null;
   /* 互动密度基准（2026-09-09 节拍热力带）：每账号历史中位 次/10分钟 —— 顶层字段必须显式挂 */
   DB.interBase=snap.interBase||{};
 }
